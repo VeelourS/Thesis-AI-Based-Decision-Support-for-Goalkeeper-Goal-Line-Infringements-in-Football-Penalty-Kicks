@@ -1,0 +1,51 @@
+# --- data (DO NOT COMMIT) ---
+data/raw/
+data/clips/
+data/**/SoccerNet*/
+**/*.mkv
+**/*.mp4
+**/*.avi
+**/*.mov
+**/Labels-*.json
+
+# optional: big artifacts
+**/*.zip
+**/*.7z
+**/*.tar
+**/*.rar
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.vscode/
+
+# venv
+.venv/
+.venv312/
+venv/
+
+# artifacts
+runs/
+yolov8n.pt
+
+# YOLO folders: ignore contents, keep folder structure
+data/yolo_gk_ball/images/*
+!data/yolo_gk_ball/images/train/
+!data/yolo_gk_ball/images/val/
+!data/yolo_gk_ball/images/test/
+!data/yolo_gk_ball/images/train/.gitkeep
+!data/yolo_gk_ball/images/val/.gitkeep
+!data/yolo_gk_ball/images/test/.gitkeep
+
+data/yolo_gk_ball/labels/*
+!data/yolo_gk_ball/labels/train/
+!data/yolo_gk_ball/labels/val/
+!data/yolo_gk_ball/labels/test/
+!data/yolo_gk_ball/labels/train/.gitkeep
+!data/yolo_gk_ball/labels/val/.gitkeep
+!data/yolo_gk_ball/labels/test/.gitkeep
+
+runs/pipeline/
+runs/pose/
+runs/violation_r2plus1d/
