@@ -205,3 +205,11 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Project-generated artifacts and local assets
+runs/
+data/raw/
+data/clips/
+*.cache
+yolov8n-pose.pt
+models/mediapipe/*.task
