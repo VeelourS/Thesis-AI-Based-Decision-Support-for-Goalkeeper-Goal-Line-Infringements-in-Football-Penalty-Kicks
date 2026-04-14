@@ -48,6 +48,41 @@ python scripts/pipeline/run_player_encroachment_probe.py `
   --out-root runs/encroachment
 ```
 
+## GT Validation Workflow
+
+The cleanest validation path is:
+
+1. run the encroachment module on ground-truth kick frames from [kick_times.csv](C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/meta/kick_times.csv)
+2. manually label those frames as `encroachment / no_encroachment / uncertain`
+3. evaluate module outputs against the manual labels
+
+### 1. Batch-run on GT kick frames
+
+```powershell
+python scripts/evaluation/batch_run_encroachment_gt.py `
+  --split test `
+  --out-dir runs/evaluation/encroachment_gt_test
+```
+
+### 2. Label encroachment ground truth
+
+```powershell
+python scripts/pipeline/label_encroachment.py
+```
+
+This writes:
+
+- [encroachment_labels.csv](C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/meta/encroachment_labels.csv)
+
+### 3. Evaluate the module
+
+```powershell
+python scripts/evaluation/evaluate_encroachment_module.py `
+  --results-csv runs/evaluation/encroachment_gt_test/test_encroachment_gt_results.csv `
+  --labels-csv data/meta/encroachment_labels.csv `
+  --out-dir runs/evaluation/encroachment_gt_eval
+```
+
 ## Outputs
 
 For each video, the module writes:
