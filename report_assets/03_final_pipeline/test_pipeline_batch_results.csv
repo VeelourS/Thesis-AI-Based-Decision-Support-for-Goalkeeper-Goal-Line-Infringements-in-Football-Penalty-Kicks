@@ -1,0 +1,179 @@
+clip_name,window_file,split,truth_label,violation,uncertain_truth,pipeline_ok,decision,reason,pred_label,raw_decision,raw_reason,policy_decision,policy_reason,policy_flags,min_dist_px,local_y_err_px,has_goalkeeper,has_line,frame_idx,kick_source,result_json,stdout_tail,stderr_tail
+2015-02-21_-_17-30_Paderborn_0_-_6_Bayern_Munich_H2_001074s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2015-02-21_-_17-30_Paderborn_0_-_6_Bayern_Munich_H2_001074s_KICK.mp4,test,valid,0,0,True,on_line,joint_line_point_selection,valid,on_line,joint_line_point_selection,on_line,joint_line_point_selection,[],2.123216521125736,2.15625,True,True,36.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2015-02-21_-_17-30_Paderborn_0_-_6_Bayern_Munich_H2_001074s_KICK/final_result.json,"Decision: on_line
+Reason: joint_line_point_selection
+Frame: 36
+Timestamp (s): 1.44
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-02-21_-_17-30_Paderborn_0_-_6_Bayern_Munich_H2_001074s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-02-21_-_17-30_Paderborn_0_-_6_Bayern_Munich_H2_001074s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-02-21_-_17-30_Paderborn_0_-_6_Bayern_Munich_H2_001074s_KICK\hybrid\final_overlay.jpg",
+2015-02-24_-_22-45_Manchester_City_1_-_2_Barcelona_H2_002912s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2015-02-24_-_22-45_Manchester_City_1_-_2_Barcelona_H2_002912s_KICK.mp4,test,valid,0,0,True,on_line,joint_line_point_selection,valid,on_line,joint_line_point_selection,on_line,joint_line_point_selection,[],4.8669594293898015,5.039453717754213,True,True,37.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2015-02-24_-_22-45_Manchester_City_1_-_2_Barcelona_H2_002912s_KICK/final_result.json,"Decision: on_line
+Reason: joint_line_point_selection
+Frame: 37
+Timestamp (s): 1.48
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-02-24_-_22-45_Manchester_City_1_-_2_Barcelona_H2_002912s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-02-24_-_22-45_Manchester_City_1_-_2_Barcelona_H2_002912s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-02-24_-_22-45_Manchester_City_1_-_2_Barcelona_H2_002912s_KICK\hybrid\final_overlay.jpg",
+2015-08-08_-_19-30_Chelsea_2_-_2_Swansea_H2_000544s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2015-08-08_-_19-30_Chelsea_2_-_2_Swansea_H2_000544s_KICK.mp4,test,valid,0,0,True,on_line,joint_line_point_selection,valid,on_line,joint_line_point_selection,on_line,joint_line_point_selection,[],5.6607152112015235,5.74588235294118,True,True,40.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2015-08-08_-_19-30_Chelsea_2_-_2_Swansea_H2_000544s_KICK/final_result.json,"Decision: on_line
+Reason: joint_line_point_selection
+Frame: 40
+Timestamp (s): 1.6
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-08-08_-_19-30_Chelsea_2_-_2_Swansea_H2_000544s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-08-08_-_19-30_Chelsea_2_-_2_Swansea_H2_000544s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-08-08_-_19-30_Chelsea_2_-_2_Swansea_H2_000544s_KICK\hybrid\final_overlay.jpg",
+2015-09-16_-_21-45_Olympiakos_Piraeus_0_-_3_Bayern_Munich_H2_002779s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2015-09-16_-_21-45_Olympiakos_Piraeus_0_-_3_Bayern_Munich_H2_002779s_KICK.mp4,test,valid,0,0,True,uncertain,boundary_plus_local_y,uncertain,on_line,joint_line_point_selection,uncertain,boundary_plus_local_y,"['near_boundary', 'high_local_y_err']",9.215052894555422,9.693877551020421,True,True,38.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2015-09-16_-_21-45_Olympiakos_Piraeus_0_-_3_Bayern_Munich_H2_002779s_KICK/final_result.json,"Decision: uncertain
+Reason: boundary_plus_local_y
+Frame: 38
+Timestamp (s): 1.52
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-09-16_-_21-45_Olympiakos_Piraeus_0_-_3_Bayern_Munich_H2_002779s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-09-16_-_21-45_Olympiakos_Piraeus_0_-_3_Bayern_Munich_H2_002779s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-09-16_-_21-45_Olympiakos_Piraeus_0_-_3_Bayern_Munich_H2_002779s_KICK\hybrid\final_overlay.jpg",
+2015-09-20_-_16-00_Genoa_0_-_2_Juventus_H2_000875s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2015-09-20_-_16-00_Genoa_0_-_2_Juventus_H2_000875s_KICK.mp4,test,valid,0,0,False,,,,,,,,,,,,,,,,"Analyzing video: 2015-09-20_-_16-00_Genoa_0_-_2_Juventus_H2_000875s_KICK.mp4
+  Total frames: 99, FPS: 25.00
+  Analysis window: 12 - 62
+  Ball detected in 0/50 frames
+  Error: Insufficient ball detections for velocity analysis","Traceback (most recent call last):
+  File ""C:\Users\user\Documents\GitHub\penalty-keeper-detection\scripts\pipeline\run_full_penalty_pipeline.py"", line 575, in <module>
+    main()
+  File ""C:\Users\user\Documents\GitHub\penalty-keeper-detection\scripts\pipeline\run_full_penalty_pipeline.py"", line 476, in main
+    raise RuntimeError(
+RuntimeError: Automatic kick detection failed and no manual --frame-idx was provided. Reason: insufficient_ball_detections"
+2015-09-27_-_21-45_Inter_1_-_4_Fiorentina_H1_000202s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2015-09-27_-_21-45_Inter_1_-_4_Fiorentina_H1_000202s_KICK.mp4,test,valid,0,0,True,on_line,joint_line_point_selection,valid,on_line,joint_line_point_selection,on_line,joint_line_point_selection,[],5.3749926734925655,5.537383177570064,True,True,38.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2015-09-27_-_21-45_Inter_1_-_4_Fiorentina_H1_000202s_KICK/final_result.json,"Decision: on_line
+Reason: joint_line_point_selection
+Frame: 38
+Timestamp (s): 1.52
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-09-27_-_21-45_Inter_1_-_4_Fiorentina_H1_000202s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-09-27_-_21-45_Inter_1_-_4_Fiorentina_H1_000202s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-09-27_-_21-45_Inter_1_-_4_Fiorentina_H1_000202s_KICK\hybrid\final_overlay.jpg",
+2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_001878s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_001878s_KICK.mp4,test,valid,0,0,True,on_line,joint_line_point_selection,valid,on_line,joint_line_point_selection,on_line,joint_line_point_selection,[],2.3192448638109653,2.5178571428571104,True,True,38.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_001878s_KICK/final_result.json,"Decision: on_line
+Reason: joint_line_point_selection
+Frame: 38
+Timestamp (s): 1.52
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_001878s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_001878s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_001878s_KICK\hybrid\final_overlay.jpg",
+2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_002200s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_002200s_KICK.mp4,test,violation,1,0,True,off_line,joint_line_point_selection,violation,off_line,joint_line_point_selection,off_line,joint_line_point_selection,['high_local_y_err'],12.6928261998443,13.782894736842081,True,True,37.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_002200s_KICK/final_result.json,"Decision: off_line
+Reason: joint_line_point_selection
+Frame: 37
+Timestamp (s): 1.48
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_002200s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_002200s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_002200s_KICK\hybrid\final_overlay.jpg",
+2015-11-24_-_22-45_FC_Porto_0_-_2_Dyn_Kiev_H1_002087s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2015-11-24_-_22-45_FC_Porto_0_-_2_Dyn_Kiev_H1_002087s_KICK.mp4,test,valid,0,0,True,on_line,joint_line_point_selection,valid,on_line,joint_line_point_selection,on_line,joint_line_point_selection,[],1.6344392211230172,1.7397959183673493,True,True,38.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2015-11-24_-_22-45_FC_Porto_0_-_2_Dyn_Kiev_H1_002087s_KICK/final_result.json,"Decision: on_line
+Reason: joint_line_point_selection
+Frame: 38
+Timestamp (s): 1.52
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-11-24_-_22-45_FC_Porto_0_-_2_Dyn_Kiev_H1_002087s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-11-24_-_22-45_FC_Porto_0_-_2_Dyn_Kiev_H1_002087s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2015-11-24_-_22-45_FC_Porto_0_-_2_Dyn_Kiev_H1_002087s_KICK\hybrid\final_overlay.jpg",
+2016-01-31_-_22-30_Real_Madrid_6_-_0_Espanyol_H1_000667s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2016-01-31_-_22-30_Real_Madrid_6_-_0_Espanyol_H1_000667s_KICK.mp4,test,violation,1,0,True,off_line,joint_line_point_selection,violation,off_line,joint_line_point_selection,off_line,joint_line_point_selection,['high_local_y_err'],15.878563099882674,16.118380062305278,True,True,38.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2016-01-31_-_22-30_Real_Madrid_6_-_0_Espanyol_H1_000667s_KICK/final_result.json,"Decision: off_line
+Reason: joint_line_point_selection
+Frame: 38
+Timestamp (s): 1.52
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-01-31_-_22-30_Real_Madrid_6_-_0_Espanyol_H1_000667s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-01-31_-_22-30_Real_Madrid_6_-_0_Espanyol_H1_000667s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-01-31_-_22-30_Real_Madrid_6_-_0_Espanyol_H1_000667s_KICK\hybrid\final_overlay.jpg",
+2016-08-20_-_19-00_AS_Roma_4_-_0_Udinese_H2_001145s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2016-08-20_-_19-00_AS_Roma_4_-_0_Udinese_H2_001145s_KICK.mp4,test,violation,1,0,True,off_line,joint_line_point_selection,violation,off_line,joint_line_point_selection,off_line,joint_line_point_selection,['high_local_y_err'],19.516805796402124,20.40512820512822,True,True,38.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2016-08-20_-_19-00_AS_Roma_4_-_0_Udinese_H2_001145s_KICK/final_result.json,"Decision: off_line
+Reason: joint_line_point_selection
+Frame: 38
+Timestamp (s): 1.52
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-08-20_-_19-00_AS_Roma_4_-_0_Udinese_H2_001145s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-08-20_-_19-00_AS_Roma_4_-_0_Udinese_H2_001145s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-08-20_-_19-00_AS_Roma_4_-_0_Udinese_H2_001145s_KICK\hybrid\final_overlay.jpg",
+2016-08-20_-_19-00_AS_Roma_4_-_0_Udinese_H2_001795s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2016-08-20_-_19-00_AS_Roma_4_-_0_Udinese_H2_001795s_KICK.mp4,test,valid,0,0,True,on_line,joint_line_point_selection,valid,on_line,joint_line_point_selection,on_line,joint_line_point_selection,[],3.467541967610389,3.625377643504521,True,True,36.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2016-08-20_-_19-00_AS_Roma_4_-_0_Udinese_H2_001795s_KICK/final_result.json,"Decision: on_line
+Reason: joint_line_point_selection
+Frame: 36
+Timestamp (s): 1.44
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-08-20_-_19-00_AS_Roma_4_-_0_Udinese_H2_001795s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-08-20_-_19-00_AS_Roma_4_-_0_Udinese_H2_001795s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-08-20_-_19-00_AS_Roma_4_-_0_Udinese_H2_001795s_KICK\hybrid\final_overlay.jpg",
+2016-09-28_-_21-45_Ludogorets_1_-_3_Paris_SG_H2_000792s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2016-09-28_-_21-45_Ludogorets_1_-_3_Paris_SG_H2_000792s_KICK.mp4,test,valid,0,0,True,on_line,joint_line_point_selection,valid,on_line,joint_line_point_selection,on_line,joint_line_point_selection,[],1.7748721859036123,1.846867749419971,True,True,36.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2016-09-28_-_21-45_Ludogorets_1_-_3_Paris_SG_H2_000792s_KICK/final_result.json,"Decision: on_line
+Reason: joint_line_point_selection
+Frame: 36
+Timestamp (s): 1.44
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-09-28_-_21-45_Ludogorets_1_-_3_Paris_SG_H2_000792s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-09-28_-_21-45_Ludogorets_1_-_3_Paris_SG_H2_000792s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-09-28_-_21-45_Ludogorets_1_-_3_Paris_SG_H2_000792s_KICK\hybrid\final_overlay.jpg",
+2016-10-01_-_14-30_Swansea_1_-_2_Liverpool_H2_002306s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2016-10-01_-_14-30_Swansea_1_-_2_Liverpool_H2_002306s_KICK.mp4,test,valid,0,0,True,off_line,joint_line_point_selection,violation,off_line,joint_line_point_selection,off_line,joint_line_point_selection,['high_local_y_err'],22.583027033503086,23.063829787234056,True,True,37.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2016-10-01_-_14-30_Swansea_1_-_2_Liverpool_H2_002306s_KICK/final_result.json,"Decision: off_line
+Reason: joint_line_point_selection
+Frame: 37
+Timestamp (s): 1.48
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-10-01_-_14-30_Swansea_1_-_2_Liverpool_H2_002306s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-10-01_-_14-30_Swansea_1_-_2_Liverpool_H2_002306s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-10-01_-_14-30_Swansea_1_-_2_Liverpool_H2_002306s_KICK\hybrid\final_overlay.jpg",
+2016-10-22_-_17-15_Valencia_2_-_3_Barcelona_H2_002902s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2016-10-22_-_17-15_Valencia_2_-_3_Barcelona_H2_002902s_KICK.mp4,test,violation,1,0,True,uncertain,boundary_plus_local_y,uncertain,off_line,joint_line_point_selection,uncertain,boundary_plus_local_y,"['near_boundary', 'high_local_y_err']",11.130303795466485,11.30059523809524,True,True,38.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2016-10-22_-_17-15_Valencia_2_-_3_Barcelona_H2_002902s_KICK/final_result.json,"Decision: uncertain
+Reason: boundary_plus_local_y
+Frame: 38
+Timestamp (s): 1.52
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-10-22_-_17-15_Valencia_2_-_3_Barcelona_H2_002902s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-10-22_-_17-15_Valencia_2_-_3_Barcelona_H2_002902s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-10-22_-_17-15_Valencia_2_-_3_Barcelona_H2_002902s_KICK\hybrid\final_overlay.jpg",
+2016-11-23_-_22-45_Arsenal_2_-_2_Paris_SG_H1_002741s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2016-11-23_-_22-45_Arsenal_2_-_2_Paris_SG_H1_002741s_KICK.mp4,test,valid,0,0,True,on_line,joint_line_point_selection,valid,on_line,joint_line_point_selection,on_line,joint_line_point_selection,[],4.2529088113815545,4.38475836431229,True,True,38.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2016-11-23_-_22-45_Arsenal_2_-_2_Paris_SG_H1_002741s_KICK/final_result.json,"Decision: on_line
+Reason: joint_line_point_selection
+Frame: 38
+Timestamp (s): 1.52
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-11-23_-_22-45_Arsenal_2_-_2_Paris_SG_H1_002741s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-11-23_-_22-45_Arsenal_2_-_2_Paris_SG_H1_002741s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2016-11-23_-_22-45_Arsenal_2_-_2_Paris_SG_H1_002741s_KICK\hybrid\final_overlay.jpg",
+2017-01-15_-_17-00_Napoli_3_-_1_Pescara_H2_002922s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2017-01-15_-_17-00_Napoli_3_-_1_Pescara_H2_002922s_KICK.mp4,test,valid,0,0,True,on_line,joint_line_point_selection,valid,on_line,joint_line_point_selection,on_line,joint_line_point_selection,[],6.656357852259004,6.927318295739326,True,True,36.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2017-01-15_-_17-00_Napoli_3_-_1_Pescara_H2_002922s_KICK/final_result.json,"Decision: on_line
+Reason: joint_line_point_selection
+Frame: 36
+Timestamp (s): 1.44
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-01-15_-_17-00_Napoli_3_-_1_Pescara_H2_002922s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-01-15_-_17-00_Napoli_3_-_1_Pescara_H2_002922s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-01-15_-_17-00_Napoli_3_-_1_Pescara_H2_002922s_KICK\hybrid\final_overlay.jpg",
+2017-02-04_-_22-45_Bologna_1_-_7_Napoli_H1_001504s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2017-02-04_-_22-45_Bologna_1_-_7_Napoli_H1_001504s_KICK.mp4,test,valid,0,0,True,on_line,joint_line_point_selection,valid,on_line,joint_line_point_selection,on_line,joint_line_point_selection,[],1.21961955337463,1.2681564245809795,True,True,34.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2017-02-04_-_22-45_Bologna_1_-_7_Napoli_H1_001504s_KICK/final_result.json,"Decision: on_line
+Reason: joint_line_point_selection
+Frame: 34
+Timestamp (s): 1.36
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-02-04_-_22-45_Bologna_1_-_7_Napoli_H1_001504s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-02-04_-_22-45_Bologna_1_-_7_Napoli_H1_001504s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-02-04_-_22-45_Bologna_1_-_7_Napoli_H1_001504s_KICK\hybrid\final_overlay.jpg",
+2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H1_000398s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H1_000398s_KICK.mp4,test,valid,0,0,True,on_line,joint_line_point_selection,valid,on_line,joint_line_point_selection,on_line,joint_line_point_selection,[],2.021948367598366,2.067132867132841,True,True,38.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H1_000398s_KICK/final_result.json,"Decision: on_line
+Reason: joint_line_point_selection
+Frame: 38
+Timestamp (s): 1.52
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H1_000398s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H1_000398s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H1_000398s_KICK\hybrid\final_overlay.jpg",
+2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H1_002248s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H1_002248s_KICK.mp4,test,valid,0,0,True,on_line,joint_line_point_selection,valid,on_line,joint_line_point_selection,on_line,joint_line_point_selection,[],0.8220484563409731,0.8402061855670127,True,True,31.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H1_002248s_KICK/final_result.json,"Decision: on_line
+Reason: joint_line_point_selection
+Frame: 31
+Timestamp (s): 1.24
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H1_002248s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H1_002248s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H1_002248s_KICK\hybrid\final_overlay.jpg",
+2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H2_002199s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H2_002199s_KICK.mp4,test,valid,0,0,True,on_line,joint_line_point_selection,valid,on_line,joint_line_point_selection,on_line,joint_line_point_selection,[],2.5037465911949788,2.5593220338982974,True,True,17.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H2_002199s_KICK/final_result.json,"Decision: on_line
+Reason: joint_line_point_selection
+Frame: 17
+Timestamp (s): 0.68
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H2_002199s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H2_002199s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-03-19_-_14-30_Empoli_2_-_3_Napoli_H2_002199s_KICK\hybrid\final_overlay.jpg",
+2017-04-30_-_13-30_AS_Roma_1_-_3_Lazio_H1_002693s_KICK.mp4,C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2017-04-30_-_13-30_AS_Roma_1_-_3_Lazio_H1_002693s_KICK.mp4,test,violation,1,0,True,off_line,joint_line_point_selection,violation,off_line,joint_line_point_selection,off_line,joint_line_point_selection,['high_local_y_err'],14.992451825134543,15.601941747572823,True,True,39.0,auto_ball_motion,C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2017-04-30_-_13-30_AS_Roma_1_-_3_Lazio_H1_002693s_KICK/final_result.json,"Decision: off_line
+Reason: joint_line_point_selection
+Frame: 39
+Timestamp (s): 1.56
+Kick source: auto_ball_motion
+Saved result JSON: C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-04-30_-_13-30_AS_Roma_1_-_3_Lazio_H1_002693s_KICK\final_result.json
+Saved result CSV:  C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-04-30_-_13-30_AS_Roma_1_-_3_Lazio_H1_002693s_KICK\final_result.csv
+Saved overlay:     C:\Users\user\Documents\GitHub\penalty-keeper-detection\runs\evaluation\final_pipeline_batch_test_auto_kick_m1\test\2017-04-30_-_13-30_AS_Roma_1_-_3_Lazio_H1_002693s_KICK\hybrid\final_overlay.jpg",

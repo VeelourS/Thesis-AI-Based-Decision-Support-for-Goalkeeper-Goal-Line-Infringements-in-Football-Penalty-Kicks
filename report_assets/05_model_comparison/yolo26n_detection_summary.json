@@ -1,0 +1,14 @@
+{
+  "model_path": "runs/detect/runs/detect/train_yolo26n_gk_ball/weights/best.pt",
+  "data_yaml": "data/yolo_gk_ball/data.yaml",
+  "split": "test",
+  "imgsz": 640,
+  "batch": 16,
+  "project": "runs/evaluation",
+  "name": "yolo26n_test88_direct",
+  "save_dir": "C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/detect/runs/evaluation/yolo26n_test88_direct",
+  "precision": 0.914231589544551,
+  "recall": 0.8476407040583747,
+  "map50": 0.8998077893114249,
+  "map5095": 0.5375195679485764
+}

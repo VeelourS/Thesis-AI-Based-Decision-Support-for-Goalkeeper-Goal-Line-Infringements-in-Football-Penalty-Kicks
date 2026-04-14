@@ -1,0 +1,28 @@
+{
+  "video_path": "C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2015-09-16_-_21-45_Olympiakos_Piraeus_0_-_3_Bayern_Munich_H2_002779s_KICK.mp4",
+  "frame_idx": 38,
+  "timestamp_s": 1.52,
+  "kick_source": "auto_ball_motion",
+  "kick_detection_confidence": 0.8602912513468189,
+  "kick_detection_method": "motion_onset",
+  "kick_detection_reason": "ok",
+  "decision": "uncertain",
+  "reason": "boundary_plus_local_y",
+  "raw_decision": "on_line",
+  "raw_reason": "joint_line_point_selection",
+  "policy_decision": "uncertain",
+  "policy_reason": "boundary_plus_local_y",
+  "policy_flags": [
+    "near_boundary",
+    "high_local_y_err"
+  ],
+  "min_dist_px": 9.215052894555422,
+  "local_y_err_px": 9.693877551020421,
+  "has_goalkeeper": true,
+  "has_line": true,
+  "best_point": "left_bottom",
+  "frame_path": "C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2015-09-16_-_21-45_Olympiakos_Piraeus_0_-_3_Bayern_Munich_H2_002779s_KICK/frames/2015-09-16_-_21-45_Olympiakos_Piraeus_0_-_3_Bayern_Munich_H2_002779s_KICK__frame_000038.jpg",
+  "overlay_path": "C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2015-09-16_-_21-45_Olympiakos_Piraeus_0_-_3_Bayern_Munich_H2_002779s_KICK/hybrid/final_overlay.jpg",
+  "label_path": "C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2015-09-16_-_21-45_Olympiakos_Piraeus_0_-_3_Bayern_Munich_H2_002779s_KICK/detect/labels/2015-09-16_-_21-45_Olympiakos_Piraeus_0_-_3_Bayern_Munich_H2_002779s_KICK__frame_000038.txt",
+  "kick_detection_json": "C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2015-09-16_-_21-45_Olympiakos_Piraeus_0_-_3_Bayern_Munich_H2_002779s_KICK/kick_detection.json"
+}

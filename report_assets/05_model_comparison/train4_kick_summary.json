@@ -1,0 +1,30 @@
+{
+  "clips_attempted": 91,
+  "clips_found": 91,
+  "success_count": 84,
+  "success_rate": 0.9230769230769231,
+  "exact_accuracy": 0.26373626373626374,
+  "within_1": 0.5824175824175825,
+  "within_2": 0.7252747252747253,
+  "within_3": 0.7582417582417582,
+  "within_5": 0.7582417582417582,
+  "mae_frames": 5.011904761904762,
+  "median_ae_frames": 1.0,
+  "mean_signed_error": -2.0833333333333335,
+  "early_count": 40,
+  "late_count": 20,
+  "config": {
+    "clips_dir": "data/clips/penalties_720p",
+    "kick_times_csv": "data/meta/kick_times.csv",
+    "model_path": "runs/detect/train4/weights/best.pt",
+    "window_start_s": 4.0,
+    "window_end_s": 12.0,
+    "ball_class_id": 1,
+    "min_confidence": 0.3,
+    "velocity_prominence_threshold": 2.5,
+    "max_tracking_jump_px": 180.0,
+    "min_sustained_velocity": 2.0,
+    "fallback_to_peak": true,
+    "frame_adjust": -1
+  }
+}

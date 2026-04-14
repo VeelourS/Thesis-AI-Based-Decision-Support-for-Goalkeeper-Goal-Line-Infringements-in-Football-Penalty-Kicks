@@ -212,4 +212,6 @@ data/raw/
 data/clips/
 *.cache
 yolov8n-pose.pt
+yolo26n.pt
 models/mediapipe/*.task
+data/pose_youtube_check/

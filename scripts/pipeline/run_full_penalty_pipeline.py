@@ -52,6 +52,8 @@ def extract_frame(video_path: Path, frame_idx: int, out_path: Path):
 def run_yolo_detect(image_path: Path, model_path: Path, project_dir: Path, conf: float):
     cli_path = shutil.which("yolo")
     if cli_path:
+        save_root = project_dir.parent.resolve()
+        save_dir = save_root / project_dir.name
         cmd = [
             cli_path,
             "task=detect",
@@ -61,13 +63,13 @@ def run_yolo_detect(image_path: Path, model_path: Path, project_dir: Path, conf:
             "save=True",
             "save_txt=True",
             f"conf={conf}",
-            f"project={project_dir.parent}",
+            f"project={save_root}",
             f"name={project_dir.name}",
             "exist_ok=True",
         ]
         print("Running YOLO detect via CLI...")
         subprocess.run(cmd, check=True)
-        return
+        return save_dir
 
     try:
         from ultralytics import YOLO
@@ -78,16 +80,20 @@ def run_yolo_detect(image_path: Path, model_path: Path, project_dir: Path, conf:
 
     print("Running YOLO detect via Python API...")
     model = YOLO(str(model_path))
-    model.predict(
+    save_root = project_dir.parent.resolve()
+    results = model.predict(
         source=str(image_path),
         conf=conf,
         save=True,
         save_txt=True,
-        project=str(project_dir.parent),
+        project=str(save_root),
         name=project_dir.name,
         exist_ok=True,
         verbose=False,
     )
+    if results:
+        return Path(results[0].save_dir)
+    return project_dir
 
 
 def auto_detect_kick_frame(video_path: Path, args, out_dir: Path):
@@ -422,15 +428,50 @@ def classify_hybrid(gk_box, best_choice, line_dist_thresh_px=10.0):
         "point_name": best_choice["point_name"],
         "point_source": best_choice.get("point_source"),
         "all_dists": best_choice["all_dists"],
+        "proxy_spread_px": (
+            max(best_choice["all_dists"].values()) - min(best_choice["all_dists"].values())
+            if best_choice.get("all_dists")
+            else None
+        ),
         "local_y_err": best_choice["local_y_err"],
     }
 
 
-def draw_result(img, gk_box, line, result, foot_points=None):
+def _extend_line_to_image(line, img_w, img_h):
+    x1, y1, x2, y2 = map(float, line)
+    if abs(x2 - x1) < 1e-6:
+        x = int(round(x1))
+        return (x, 0, x, img_h - 1)
+
+    m = (y2 - y1) / (x2 - x1)
+    b = y1 - m * x1
+
+    points = []
+    for x in (0.0, float(img_w - 1)):
+        y = m * x + b
+        if 0.0 <= y <= float(img_h - 1):
+            points.append((int(round(x)), int(round(y))))
+    if abs(m) > 1e-6:
+        for y in (0.0, float(img_h - 1)):
+            x = (y - b) / m
+            if 0.0 <= x <= float(img_w - 1):
+                points.append((int(round(x)), int(round(y))))
+
+    unique_points = []
+    for point in points:
+        if point not in unique_points:
+            unique_points.append(point)
+    if len(unique_points) < 2:
+        return tuple(map(int, line))
+    return (*unique_points[0], *unique_points[-1])
+
+
+def draw_result(img, gk_box, line, result, foot_points=None, frame_idx=None, kick_source=None):
     vis = img.copy()
+    h, w = img.shape[:2]
 
     if line is not None:
-        x1, y1, x2, y2 = line
+        x1, y1, x2, y2 = _extend_line_to_image(line, w, h)
         cv2.line(vis, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
     if gk_box is not None:
@@ -453,16 +494,53 @@ def draw_result(img, gk_box, line, result, foot_points=None):
                 radius = 6
             cv2.circle(vis, (int(round(px)), int(round(py))), radius, color, -1)
 
-    txt = result["decision"]
-    if result["min_dist"] is not None:
-        txt += f" | min_dist={result['min_dist']:.1f}px"
-    if result["local_y_err"] is not None:
-        txt += f" | local_y_err={result['local_y_err']:.1f}"
-    if result.get("point_source"):
-        txt += f" | point={result['point_source']}"
-    txt += f" | via={result['reason']}"
+    panel = vis.copy()
+    cv2.rectangle(panel, (14, 14), (540, 118), (0, 0, 0), -1)
+    cv2.addWeighted(panel, 0.42, vis, 0.58, 0, vis)
 
-    cv2.putText(vis, txt, (20, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+    decision = str(result["decision"]).upper()
+    decision_color = {
+        "ON_LINE": (0, 220, 0),
+        "OFF_LINE": (0, 0, 255),
+        "UNCERTAIN": (0, 200, 255),
+    }.get(decision, (255, 255, 255))
+
+    cv2.putText(vis, decision, (28, 48), cv2.FONT_HERSHEY_SIMPLEX, 1.0, decision_color, 3)
+
+    metrics = []
+    if result["min_dist"] is not None:
+        metrics.append(f"min_dist={result['min_dist']:.1f}px")
+    if result["local_y_err"] is not None:
+        metrics.append(f"local_y_err={result['local_y_err']:.1f}px")
+    if result.get("proxy_spread_px") is not None:
+        metrics.append(f"proxy_spread={result['proxy_spread_px']:.1f}px")
+    if result.get("point_name"):
+        metrics.append(f"best_point={result['point_name']}")
+    if result.get("point_source"):
+        metrics.append(f"source={result['point_source']}")
+    if frame_idx is not None:
+        metrics.append(f"frame={frame_idx}")
+    if kick_source:
+        metrics.append(f"kick={kick_source}")
+
+    cv2.putText(
+        vis,
+        " | ".join(metrics[:3]),
+        (28, 78),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.65,
+        (255, 255, 255),
+        2,
+    )
+    cv2.putText(
+        vis,
+        f"reason={result['reason']}" + ("" if len(metrics) <= 3 else " | " + " | ".join(metrics[3:])),
+        (28, 104),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.58,
+        (220, 220, 220),
+        2,
+    )
     return vis
 
 
@@ -491,6 +569,7 @@ def main():
     parser.add_argument("--apply-uncertain-policy", action="store_true", help="Convert borderline line decisions into an explicit `uncertain` output")
     parser.add_argument("--uncertainty-margin-px", type=float, default=2.0, help="Distance band around the line threshold that becomes uncertain")
     parser.add_argument("--uncertainty-local-y-err-px", type=float, default=8.0, help="Local vertical geometry threshold used by the uncertainty policy")
+    parser.add_argument("--uncertainty-bbox-proxy-spread-px", type=float, default=17.0, help="High spread between bbox-foot proxy distances that triggers a conservative uncertain output")
     parser.add_argument("--out-root", default="runs/pipeline")
     args = parser.parse_args()
 
@@ -544,14 +623,14 @@ def main():
     with open(video_info_path, "w", encoding="utf-8") as f:
         json.dump(info, f, indent=2)
 
-    run_yolo_detect(
+    detect_output_dir = run_yolo_detect(
         image_path=frame_path,
         model_path=Path(args.model_path),
         project_dir=detect_dir,
         conf=args.conf,
     )
 
-    label_path = detect_dir / "labels" / f"{frame_path.stem}.txt"
+    label_path = detect_output_dir / "labels" / f"{frame_path.stem}.txt"
     img = cv2.imread(str(frame_path))
     if img is None:
         raise RuntimeError(f"Could not read extracted frame image: {frame_path}")
@@ -580,10 +659,19 @@ def main():
             line_dist_thresh_px=args.line_dist_thresh,
             uncertainty_margin_px=args.uncertainty_margin_px,
             local_y_err_thresh_px=args.uncertainty_local_y_err_px,
+            bbox_proxy_spread_thresh_px=args.uncertainty_bbox_proxy_spread_px,
         )
 
     line = None if best_choice is None else best_choice["line"]
-    vis = draw_result(img, gk_box, line, result, foot_points=foot_points)
+    vis = draw_result(
+        img,
+        gk_box,
+        line,
+        result,
+        foot_points=foot_points,
+        frame_idx=frame_idx,
+        kick_source=kick_source,
+    )
 
     overlay_path = hybrid_dir / "final_overlay.jpg"
     cv2.imwrite(str(overlay_path), vis)
@@ -609,6 +697,8 @@ def main():
         "has_line": line is not None,
         "best_point": result["point_name"],
         "best_point_source": result.get("point_source"),
+        "proxy_spread_px": result.get("proxy_spread_px"),
+        "all_dists": result.get("all_dists"),
         "pose_model_path": args.pose_model_path,
         "pose_available": pose_result.get("available"),
         "pose_reason": pose_result.get("reason"),

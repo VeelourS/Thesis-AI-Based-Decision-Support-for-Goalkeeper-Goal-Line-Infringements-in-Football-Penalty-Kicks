@@ -1,0 +1,27 @@
+{
+  "video_path": "C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/clips/kick_windows_720p_v2/2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_002200s_KICK.mp4",
+  "frame_idx": 37,
+  "timestamp_s": 1.48,
+  "kick_source": "auto_ball_motion",
+  "kick_detection_confidence": 0.8953447279101815,
+  "kick_detection_method": "motion_onset",
+  "kick_detection_reason": "ok",
+  "decision": "off_line",
+  "reason": "joint_line_point_selection",
+  "raw_decision": "off_line",
+  "raw_reason": "joint_line_point_selection",
+  "policy_decision": "off_line",
+  "policy_reason": "joint_line_point_selection",
+  "policy_flags": [
+    "high_local_y_err"
+  ],
+  "min_dist_px": 12.6928261998443,
+  "local_y_err_px": 13.782894736842081,
+  "has_goalkeeper": true,
+  "has_line": true,
+  "best_point": "right_bottom",
+  "frame_path": "C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_002200s_KICK/frames/2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_002200s_KICK__frame_000037.jpg",
+  "overlay_path": "C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_002200s_KICK/hybrid/final_overlay.jpg",
+  "label_path": "C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_002200s_KICK/detect/labels/2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_002200s_KICK__frame_000037.txt",
+  "kick_detection_json": "C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test/2015-11-24_-_22-45_Barcelona_6_-_1_AS_Roma_H2_002200s_KICK/kick_detection.json"
+}

@@ -1,0 +1,18 @@
+{
+  "split": "test",
+  "clips_attempted": 22,
+  "pipeline_ok": 21,
+  "pipeline_failed": 1,
+  "decision_counts": {
+    "on_line": 14,
+    "off_line": 5,
+    "uncertain": 2
+  },
+  "pred_label_counts": {
+    "valid": 14,
+    "violation": 5,
+    "uncertain": 2
+  },
+  "exact_match_rate": 0.8571428571428571,
+  "coverage_non_uncertain": 0.9047619047619048
+}

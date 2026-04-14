@@ -1,0 +1,30 @@
+{
+  "clips_attempted": 91,
+  "clips_found": 91,
+  "success_count": 89,
+  "success_rate": 0.978021978021978,
+  "exact_accuracy": 0.1978021978021978,
+  "within_1": 0.6043956043956044,
+  "within_2": 0.7142857142857143,
+  "within_3": 0.7802197802197802,
+  "within_5": 0.8461538461538461,
+  "mae_frames": 5.348314606741573,
+  "median_ae_frames": 1.0,
+  "mean_signed_error": 0.02247191011235955,
+  "early_count": 49,
+  "late_count": 22,
+  "config": {
+    "clips_dir": "data/clips/penalties_720p",
+    "kick_times_csv": "data/meta/kick_times.csv",
+    "model_path": "runs/detect/runs/detect/train_yolo26n_gk_ball/weights/best.pt",
+    "window_start_s": 4.0,
+    "window_end_s": 12.0,
+    "ball_class_id": 1,
+    "min_confidence": 0.3,
+    "velocity_prominence_threshold": 2.5,
+    "max_tracking_jump_px": 180.0,
+    "min_sustained_velocity": 2.0,
+    "fallback_to_peak": true,
+    "frame_adjust": -1
+  }
+}
