@@ -108,6 +108,20 @@ Key message:
 - the system generalizes partially to external clips
 - the main limitation is not only detection, but also the foot-contact proxy and geometry assumptions
 
+## Optional Experimental Extension
+
+If there is time and the supervisor is interested in future work, open:
+
+- [ENCROACHMENT_PROBE.md](C:/Users/user/Documents/GitHub/penalty-keeper-detection/docs/ENCROACHMENT_PROBE.md)
+- [Getafe encroachment overlay](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/encroachment/2015-04-28_-_21-00_Barcelona_6_-_0_Getafe_H1_000524s/encroachment_overlay.jpg)
+- [Extra Pen 1 encroachment overlay](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/encroachment/Extra%20Pen%201/encroachment_overlay.jpg)
+
+Key message:
+
+- encroachment detection now exists as a working heuristic probe
+- it reuses the same YOLO-based ecosystem as the main thesis pipeline
+- it is promising as future work, but it is not yet validated enough to be presented as part of the final adopted method
+
 ## What Not To Oversell
 
 Do not present pose estimation as part of the final method.
