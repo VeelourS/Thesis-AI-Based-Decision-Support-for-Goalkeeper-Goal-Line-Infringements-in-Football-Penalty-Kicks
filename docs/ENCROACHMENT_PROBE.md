@@ -1,12 +1,12 @@
-# Encroachment Probe
+# Encroachment Module (Experimental)
 
-This repository now includes an experimental probe for player encroachment detection during the penalty kick moment:
+This repository now includes an experimental encroachment module for player encroachment detection during the penalty kick moment:
 
 - script: [scripts/pipeline/run_player_encroachment_probe.py](C:/Users/user/Documents/GitHub/penalty-keeper-detection/scripts/pipeline/run_player_encroachment_probe.py)
 
 ## What It Does
 
-The probe is a heuristic prototype, not a final thesis module. It combines:
+The module is still heuristic and exploratory, but it now produces a proper decision output. It combines:
 
 - automatic or manual kick-frame selection
 - goalkeeper and ball detection from the thesis detector
@@ -14,9 +14,25 @@ The probe is a heuristic prototype, not a final thesis module. It combines:
 - penalty-area front-line estimation using Hough-line geometry
 - on-pitch filtering based on grass/white-line evidence near the bottom of each person box
 - kicker selection based on ball proximity and frame-to-frame motion
-- encroachment candidate selection for non-kicker, non-goalkeeper persons near the penalty-area front line
+- jersey-color outlier filtering to suppress likely referee detections
+- encroachment candidate selection for non-kicker, non-goalkeeper likely-players near the penalty-area front line
 
-The output is intended for qualitative review, not yet for final quantitative reporting.
+The output is intended for qualitative review and exploratory validation, not yet for final quantitative reporting.
+
+## Current Decision Outputs
+
+The JSON output contains:
+
+- `decision = "no_encroachment"`
+- `decision = "encroachment"`
+- `decision = "uncertain"`
+
+Current uncertainty reasons include:
+
+- low kick-frame confidence
+- missing goalkeeper or ball
+- missing kicker
+- missing penalty-area front line
 
 ## Example Command
 
@@ -34,7 +50,7 @@ python scripts/pipeline/run_player_encroachment_probe.py `
 
 ## Outputs
 
-For each video, the probe writes:
+For each video, the module writes:
 
 - `encroachment_overlay.jpg`
 - `encroachment_result.json`
@@ -49,22 +65,23 @@ Example outputs:
 
 ## Current Strengths
 
-- The probe runs end-to-end on real penalty clips.
+- The module runs end-to-end on real penalty clips.
 - It no longer marks obvious off-field detections as encroachment by default.
+- It now returns an explicit final decision with a reason code.
 - It can isolate plausible candidate players near the top of the penalty area.
 - It is reusable on both thesis clips and external clips.
 
 ## Current Limitations
 
 - The `person` detector still sees referees and some people near the sidelines or behind the goal.
-- Team identity is not modeled, so the probe cannot yet distinguish attackers from defenders.
+- Team identity is not modeled, so the module cannot yet distinguish attackers from defenders.
 - Kick-frame quality still depends on the ball detector and can drift on difficult clips.
 - The selected line is a penalty-area front-line heuristic, not a calibrated field model.
-- Results should be interpreted as `possible encroachment candidates`, not final rule decisions.
+- Results should still be interpreted conservatively even though the module now emits a final decision label.
 
 ## Recommended Thesis Positioning
 
-This probe is best presented as:
+This module is best presented as:
 
 - an exploratory extension beyond the final adopted goalkeeper-line pipeline
 - evidence that encroachment detection is technically approachable with the same YOLO-based toolchain
