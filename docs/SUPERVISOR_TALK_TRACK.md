@@ -1,99 +1,247 @@
 # Supervisor Talk Track
 
-This is the fastest way to explain the project clearly in a live meeting.
+This file contains the recommended talking structure for the supervisor meeting or thesis defense.
+All numbers reference the final adopted pipeline: `train4 + auto-kick -1 + uncertainty policy`.
 
-## 30-Second Version
+---
 
-`The thesis is a single-camera, YOLO-based decision-support system for goalkeeper goal-line infringements during penalty kicks.`
+## Opening (30 seconds)
 
-`The final adopted method is automatic kick detection, a -1 frame correction, YOLO goalkeeper and ball detection, geometric goal-line reasoning, and an explicit uncertainty output.`
+> "The thesis builds a decision-support system that automatically detects whether a goalkeeper
+> was behind the goal line at the moment a penalty kick was taken.
+> The input is a standard broadcast video clip. The output is one of three decisions:
+> *valid* (goalkeeper on the line), *violation* (goalkeeper over the line), or *uncertain*.
+> The system is designed as a support tool for a human referee, not as a replacement."
 
-`The system is meant to support human review, not replace the referee.`
+---
 
-## 2-Minute Demo Order
+## Structure of the presentation
 
-### 1. Open the thesis result summary
+1. Problem and motivation
+2. Dataset and annotation
+3. YOLO detection — goalkeeper and ball
+4. Automatic kick-frame detection
+5. Goal-line decision logic
+6. Uncertainty policy
+7. End-to-end evaluation results
+8. Investigated alternatives (pose, YOLO26n)
+9. Extension: player encroachment probe
+10. Limitations and future work
 
-Open:
+---
 
-- [FINAL_RESULTS.md](C:/Users/user/Documents/GitHub/penalty-keeper-detection/docs/FINAL_RESULTS.md)
+## Section-by-section talk track
 
-Say:
+### 1. Problem and motivation
 
-- `This file is the current state of the thesis results and the final methodological choice.`
-- `The main contribution is the goalkeeper goal-line pipeline.`
+Key point:
+- Goalkeeper goal-line infringement is a real VAR-reviewed violation in football
+- Current VAR process is manual and subjective
+- Automation from broadcast footage is non-trivial: camera angle, occlusion, fast motion
 
-### 2. Show detector quality
+### 2. Dataset and annotation
 
-Open:
+Key points:
+- Video clips extracted from real match broadcasts (720p, 25fps)
+- Labels: *violation* (goalkeeper clearly off-line at kick moment), *valid* (on-line), *uncertain* (ambiguous)
+- Train / val / test split (94 / 19 / 22 clips)
+- Dataset is small by ML standards — this is a deliberate constraint of single-camera broadcast footage
 
-- [evaluation_summary.json](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/detect/runs/evaluation/yolo_train4_test88_direct/evaluation_summary.json)
-- [BoxPR_curve.png](C:/Users/user/Documents/GitHub/penalty-keeper-detection/report_assets/01_detection_metrics/BoxPR_curve.png)
+If asked about dataset size:
+> "The dataset was manually collected and annotated from broadcast footage.
+> The small size reflects the rarity of actual penalty kicks in match footage
+> and the challenge of obtaining usable angles. This is also why an abstaining
+> classifier design is appropriate — we do not want false confidence."
 
-Say:
+### 3. YOLO detection
 
-- `Goalkeeper detection is very strong; ball detection is harder and becomes the main bottleneck for kick timing.`
+Key points:
+- YOLOv8n fine-tuned on labeled penalty kick frames
+- Two classes: goalkeeper, ball
+- Test set: 88 images
+- Goalkeeper detection: mAP50 = 0.995 (very strong)
+- Ball detection: mAP50 = 0.631 (weaker — ball is small, fast, sometimes occluded)
 
-### 3. Show kick timing
+Why goalkeeper detection is what matters most for the final decision:
+> "The goal-line decision is based on the goalkeeper's position, not the ball.
+> Ball detection matters for kick timing, but goalkeeper detection is the
+> direct input to the line logic. The very high goalkeeper mAP gives us
+> confidence in the localization step."
 
-Open:
+### 4. Automatic kick-frame detection
 
-- [summary.json](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/kick_detection_eval_m1/summary.json)
+Key points:
+- Ball motion velocity is tracked within a sliding window
+- Onset of large velocity increase = kick moment
+- Success rate: 92.3% on test set
+- Adjusted by -1 frame (systematic late-detection correction)
+- With -1 adjustment: within ±1 frame: 58.2%, within ±2: 72.5%
 
-Say:
+If asked why -1:
+> "The motion-onset detector responds to the velocity peak, which tends to occur
+> slightly after the actual foot contact. A -1 correction shifts the estimated frame
+> back by one, which empirically produced the best end-to-end pipeline result."
 
-- `The system estimates the kick moment automatically from ball motion.`
-- `A minus-one-frame correction gave the best practical alignment.`
+### 5. Goal-line decision logic
 
-### 4. Show final thesis pipeline
+Key points:
+- Goal line detected via Hough line transform + color filtering (white horizontal line)
+- Goalkeeper position: bottom edge of bounding box used as foot proxy
+- Distance between foot proxy and goal line is computed
+- Decision: if bottom point is on the line or behind it → valid; otherwise → violation
 
-Open:
+If asked about the foot proxy:
+> "Using the bounding box bottom as a foot proxy is a known limitation.
+> It is not the same as the actual foot contact point.
+> This is discussed explicitly as a limitation.
+> We investigated pose estimation as a refinement but it did not improve
+> the end-to-end results, so the bbox proxy remains the final method."
 
-- [test_pipeline_batch_summary.json](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test_pipeline_batch_summary.json)
-- [01_valid_final_overlay.jpg](C:/Users/user/Documents/GitHub/penalty-keeper-detection/report_assets/04_demo_images/01_valid_final_overlay.jpg)
-- [02_violation_final_overlay.jpg](C:/Users/user/Documents/GitHub/penalty-keeper-detection/report_assets/04_demo_images/02_violation_final_overlay.jpg)
-- [03_uncertain_final_overlay.jpg](C:/Users/user/Documents/GitHub/penalty-keeper-detection/report_assets/04_demo_images/03_uncertain_final_overlay.jpg)
+### 6. Uncertainty policy
 
-Say:
+Key points:
+- Two conditions trigger uncertain: near boundary (margin < 2px) and high local_y_err
+- Uncertain is not a failure — it is an intentional abstention
+- Covers genuinely ambiguous cases where human judgment is needed
 
-- `This is the final adopted thesis pipeline.`
-- `It reaches about 0.905 coverage and about 0.900 selective accuracy, while keeping perfect recall for confirmed violations on certain predictions.`
-- `The uncertain output is deliberate, because that is safer than forcing a wrong decision in poor visual conditions.`
+Why uncertainty is a feature, not a bug:
+> "In a referee-support context, overconfident wrong answers are more dangerous
+> than honest abstentions. The uncertainty policy lets the system say:
+> 'I cannot decide this reliably — a human should review it.'
+> This is consistent with the assistant-tool framing of the thesis."
 
-### 5. Mention what was tested and rejected
+### 7. End-to-end evaluation results
 
-Say:
+Read the numbers from `FINAL_RESULTS.md` or the table in the report:
 
-- `We also tested pose refinement and a newer YOLO26n detector.`
-- `YOLO26n improved pure detection metrics, but it did not beat the best final end-to-end rule decision pipeline.`
-- `Pose looked promising in some frames, but repeated end-to-end tests made performance worse, so it was not adopted.`
+| Metric | Value |
+|---|---|
+| Coverage | 0.909 |
+| Selective accuracy | 0.900 |
+| Lower-bound accuracy | 0.818 |
+| Precision (violation) | 0.800 |
+| Recall (violation) | 1.000 |
+| F1 (violation) | 0.889 |
 
-## Optional Extension Section
+Key messages:
+- Zero missed violations in certain predictions (recall = 1.0)
+- One false alarm (the goalkeeper was actually valid but was flagged)
+- Two abstentions (the system said uncertain)
+- This is the right trade-off: better to have one false alarm than to miss a real violation
 
-Only show this if the supervisor asks about future work, extra ambition, or broader officiating support.
+Comparison to a no-skill baseline:
+> "A classifier that always predicts *valid* would get 0% violation recall.
+> A classifier that always predicts *violation* would get 100% recall but 0% precision.
+> Our system achieves 100% recall with 80% precision — it catches all violations
+> while minimizing false alarms on the cases where it commits to a decision."
 
-Open:
+### 8. Investigated alternatives
 
-- [test_combined_officiating_summary.json](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/combined_officiating_gt_test_v4/test_combined_officiating_summary.json)
-- [encroachment_eval_summary.json](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/encroachment_gt_eval_v5/encroachment_eval_summary.json)
-- [combined Real Madrid example](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/combined_officiating_gt_test_v4/2016-01-31_-_22-30_Real_Madrid_6_-_0_Espanyol_H1_000667s/combined_overlay.jpg)
-- [combined Roma/Udinese example](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/combined_officiating_gt_test_v4/2016-08-20_-_19-00_AS_Roma_4_-_0_Udinese_H2_001145s/combined_overlay.jpg)
+#### Pose estimation
+- Tested YOLOv8s-pose crop-based and full-frame
+- Multiple integration variants (v2, v3, v4, v5)
+- Some individual outputs looked visually promising
+- End-to-end: pose-assisted versions did not improve over bbox-based pipeline
+- Decision: pose not adopted as final method; described as investigated refinement
 
-Say:
+#### YOLO26n (larger model comparison)
+- Better raw detection metrics: mAP50 = 0.900 vs 0.813 for train4
+- Better ball detection in particular
+- End-to-end pipeline result: slightly lower (missed one violation due to different kick timing)
+- Decision: train4 adopted as final model because it produced better end-to-end outcome
 
-- `This is an experimental extension, not the final adopted thesis method.`
-- `It uses the same kick frame and combines goalkeeper-line checking with player encroachment checking.`
-- `The top half of the overlay is the goalkeeper decision, and the bottom half is the encroachment decision.`
-- `It is already partially validated, but we still present it as an extension rather than the core thesis result.`
+This is an important thesis point:
+> "Better detection metrics did not automatically translate into better
+> end-to-end pipeline performance. The pipeline result depends on kick timing,
+> line geometry, and the uncertainty policy jointly — not just detection quality alone."
 
-## If The Supervisor Pushes On Weaknesses
+### 9. Encroachment extension
 
-Say this directly:
+- Experimental extension: detect whether outfield players entered the penalty area early
+- Separate probe script, partially validated on manually annotated clips
+- Shows the pipeline can be extended beyond the goalkeeper alone
+- Not adopted as core thesis contribution
 
-- `The main remaining limitation is not basic detection anymore, but geometry and proxy quality.`
-- `For goalkeeper line checks, the hardest problem is that the bottom of the goalkeeper box is only a proxy for the real foot-ground contact point.`
-- `For encroachment, the hardest problems are player separation in crowded frames and reliable penalty-area line geometry in difficult views.`
+> "This is included as a demonstration that the single-camera setup can potentially
+> support multiple types of penalty-related infringement detection.
+> It is not part of the evaluated final pipeline."
 
-## Best Final One-Liner
+### 10. Limitations and future work
 
-`The final thesis result is a working single-camera referee-support pipeline for goalkeeper goal-line infringements, with uncertainty-aware outputs and a promising combined encroachment extension built on the same foundation.`
+Honest limitations:
+- Small test set (22 clips) — results should be treated as preliminary evidence
+- Bounding box bottom is a coarse foot proxy
+- Goal-line detection relies on a visible white line — may fail with occlusion or bad angles
+- Kick timing detection has a ~1 frame median error
+- Generalisation to broadcast footage outside the training distribution is uncertain
+
+Future work:
+- Larger and more diverse dataset
+- Better foot contact estimation (foot segmentation or depth estimation)
+- More robust line detection (learned line detection)
+- MediaPipe or learned pose for foot-contact estimation in hard cases
+
+---
+
+## Handling difficult questions
+
+### "Why is the test set so small?"
+> "Penalty kicks are rare events in football. We collected all usable clips
+> from the available broadcast footage. A small test set means we should
+> be careful about generalising the numbers, which is why we report
+> confidence intervals and also show generalization on three external clips."
+
+### "Why not use pose as the final method?"
+> "We invested significant effort in pose integration.
+> The results were mixed: on some individual cases, pose gave more precise
+> foot localization. But across the full evaluation, the pose-assisted
+> variants did not outperform the bbox-based pipeline.
+> The most likely reason is that the YOLOv8s-pose model was not specifically
+> trained for football penalty kick pose estimation, and its foot keypoints
+> in crouched goalkeeper positions were often inconsistent.
+> We report this honestly as a negative result — it is still a valid scientific finding."
+
+### "Why did YOLO26n not win?"
+> "YOLO26n improved the detection mAP substantially.
+> However, end-to-end evaluation on the full pipeline showed it produced
+> slightly worse line-decision results — specifically, it missed one violation
+> that train4 caught. This happened because kick-timing detection and line geometry
+> interact with detection confidence in non-linear ways.
+> This is an honest and interesting finding: optimising the detector alone
+> does not guarantee optimising the final pipeline."
+
+### "Is this system ready for real deployment?"
+> "No — and we are explicit about this. The system is presented as a
+> proof-of-concept decision-support tool validated on a small controlled dataset.
+> For deployment, a larger and more diverse dataset would be needed,
+> along with more robust line detection and pose estimation.
+> The thesis contribution is the methodology, the pipeline design,
+> and the honest evaluation framework, not a production-ready system."
+
+### "What is the contribution compared to existing work?"
+> "Most existing work on sports video analysis focuses on tracking or
+> general action recognition. The specific task of goal-line infringement
+> detection from single-camera broadcast footage has not been studied
+> in the form presented here. The pipeline design, the abstaining classifier
+> framing, and the explicit uncertainty policy are tailored contributions
+> for the assistant-tool use case."
+
+### "How does uncertainty actually work in practice?"
+> "The uncertainty policy checks two conditions before committing to a decision.
+> First: is the goalkeeper foot proxy within 2 pixels of the goal line?
+> That is close enough that pixel-level detection noise could flip the decision.
+> Second: is the local vertical estimation error high, meaning the line geometry
+> reconstruction was imprecise at that location?
+> If either condition holds, the system abstains. This means the referee
+> gets flagged with 'review this one manually' rather than a potentially wrong answer."
+
+---
+
+## One-slide summary (for final slide)
+
+- Task: goalkeeper goal-line infringement detection from broadcast video
+- Method: YOLO + auto-kick detection + line geometry + uncertainty policy
+- Result: 100% violation recall on test set, 90% selective accuracy, 89% F1
+- Honest scope: proof-of-concept support tool, not production deployment
+- Investigated: pose estimation (not adopted), YOLO26n (not adopted as final)
+- Extended: player encroachment probe (experimental)
