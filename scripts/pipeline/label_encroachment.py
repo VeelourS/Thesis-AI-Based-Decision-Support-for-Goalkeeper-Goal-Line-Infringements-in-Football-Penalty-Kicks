@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import csv
 from pathlib import Path
 from typing import Dict
@@ -12,10 +13,10 @@ RESULTS_CSV = Path("runs/evaluation/encroachment_gt_test/test_encroachment_gt_re
 OUT_CSV = Path("data/meta/encroachment_labels.csv")
 
 
-def load_done() -> Dict[str, Dict[str, str]]:
+def load_done(out_csv: Path) -> Dict[str, Dict[str, str]]:
     done: Dict[str, Dict[str, str]] = {}
-    if OUT_CSV.exists() and OUT_CSV.stat().st_size > 0:
-        with OUT_CSV.open("r", newline="", encoding="utf-8") as f:
+    if out_csv.exists() and out_csv.stat().st_size > 0:
+        with out_csv.open("r", newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 key = f"{row.get('clip_name','')}::{row.get('frame_idx_gt','')}"
@@ -23,10 +24,10 @@ def load_done() -> Dict[str, Dict[str, str]]:
     return done
 
 
-def append_row(row: Dict[str, str]) -> None:
-    OUT_CSV.parent.mkdir(parents=True, exist_ok=True)
-    write_header = (not OUT_CSV.exists()) or OUT_CSV.stat().st_size == 0
-    with OUT_CSV.open("a", newline="", encoding="utf-8") as f:
+def append_row(row: Dict[str, str], out_csv: Path) -> None:
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
+    write_header = (not out_csv.exists()) or out_csv.stat().st_size == 0
+    with out_csv.open("a", newline="", encoding="utf-8") as f:
         fieldnames = [
             "clip_name",
             "frame_idx_gt",
@@ -43,12 +44,20 @@ def append_row(row: Dict[str, str]) -> None:
 
 
 def main():
-    if not RESULTS_CSV.exists():
-        raise SystemExit(f"Missing results CSV: {RESULTS_CSV}")
+    parser = argparse.ArgumentParser(description="Manually label encroachment on GT kick-frame overlays.")
+    parser.add_argument("--results-csv", default=str(RESULTS_CSV))
+    parser.add_argument("--out-csv", default=str(OUT_CSV))
+    args = parser.parse_args()
 
-    df = pd.read_csv(RESULTS_CSV)
+    results_csv = Path(args.results_csv)
+    out_csv = Path(args.out_csv)
+
+    if not results_csv.exists():
+        raise SystemExit(f"Missing results CSV: {results_csv}")
+
+    df = pd.read_csv(results_csv)
     df = df.loc[df["pipeline_ok"] == True].copy()
-    done = load_done()
+    done = load_done(out_csv)
 
     print(f"Rows available: {len(df)} | Already labeled: {len(done)}")
     print("Controls:")
@@ -116,13 +125,14 @@ def main():
                         "notes": "",
                         "overlay_path": str(overlay_path).replace("\\", "/"),
                         "result_json": str(row.result_json).replace("\\", "/"),
-                    }
+                    },
+                    out_csv,
                 )
                 print(f"[OK] {clip_name} -> {'UNCERTAIN' if uncertain == '1' else ('ENCROACHMENT' if encroachment == '1' else 'NO ENCROACHMENT')}")
                 break
 
     cv2.destroyAllWindows()
-    print(f"Done. Saved: {OUT_CSV}")
+    print(f"Done. Saved: {out_csv}")
 
 
 if __name__ == "__main__":

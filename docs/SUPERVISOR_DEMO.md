@@ -17,6 +17,7 @@ The system is presented as a support tool, not full automation.
 Start with:
 
 - [FINAL_RESULTS.md](C:/Users/user/Documents/GitHub/penalty-keeper-detection/docs/FINAL_RESULTS.md)
+- [SUPERVISOR_TALK_TRACK.md](C:/Users/user/Documents/GitHub/penalty-keeper-detection/docs/SUPERVISOR_TALK_TRACK.md)
 - [report_assets/00_FINAL_RESULTS.md](C:/Users/user/Documents/GitHub/penalty-keeper-detection/report_assets/00_FINAL_RESULTS.md)
 
 Then use:
@@ -113,14 +114,17 @@ Key message:
 If there is time and the supervisor is interested in future work, open:
 
 - [ENCROACHMENT_PROBE.md](C:/Users/user/Documents/GitHub/penalty-keeper-detection/docs/ENCROACHMENT_PROBE.md)
-- [Getafe encroachment overlay](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/encroachment/2015-04-28_-_21-00_Barcelona_6_-_0_Getafe_H1_000524s/encroachment_overlay.jpg)
-- [Extra Pen 1 encroachment overlay](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/encroachment/Extra%20Pen%201/encroachment_overlay.jpg)
+- [combined batch summary](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/combined_officiating_gt_test_v4/test_combined_officiating_summary.json)
+- [encroachment validation summary](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/encroachment_gt_eval_v5/encroachment_eval_summary.json)
+- [combined Real Madrid example](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/combined_officiating_gt_test_v4/2016-01-31_-_22-30_Real_Madrid_6_-_0_Espanyol_H1_000667s/combined_overlay.jpg)
+- [combined Roma/Udinese example](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/combined_officiating_gt_test_v4/2016-08-20_-_19-00_AS_Roma_4_-_0_Udinese_H2_001145s/combined_overlay.jpg)
 
 Key message:
 
-- encroachment detection now exists as a working heuristic probe
-- it reuses the same YOLO-based ecosystem as the main thesis pipeline
-- it is promising as future work, but it is not yet validated enough to be presented as part of the final adopted method
+- encroachment detection now exists as a working experimental extension
+- it reuses the same YOLO-based ecosystem and the same kick moment as the main thesis pipeline
+- the combined runner can show goalkeeper-line and encroachment decisions together on the same kick frame
+- it is promising and already partially validated, but it should still be framed as an extension rather than the final adopted thesis method
 
 ## What Not To Oversell
 
@@ -129,8 +133,8 @@ Do not present pose estimation as part of the final method.
 The honest position is:
 
 - pose was investigated
-- pose occasionally looked promising
-- repeated tests did not improve end-to-end performance
+- pose occasionally looked promising in isolated frames
+- repeated end-to-end tests degraded performance
 - therefore pose was not adopted into the final pipeline
 
 ## Recommended Demo Flow
@@ -142,6 +146,7 @@ The honest position is:
 5. Show the three demo overlays from [04_demo_images](C:/Users/user/Documents/GitHub/penalty-keeper-detection/report_assets/04_demo_images)
 6. Mention YOLO26n via [05_model_comparison](C:/Users/user/Documents/GitHub/penalty-keeper-detection/report_assets/05_model_comparison)
 7. End with limitations using [06_external_checks](C:/Users/user/Documents/GitHub/penalty-keeper-detection/report_assets/06_external_checks)
+8. If there is time, show the combined extension using [combined_officiating_gt_test_v4](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/combined_officiating_gt_test_v4)
 
 ## Short Supervisor Summary
 
@@ -152,3 +157,13 @@ If you only have one minute:
 - the strongest result is the `train4 + auto-kick -1` pipeline
 - pose was investigated but not adopted
 - YOLO26n improved detection metrics, but not the best final decision result
+- a newer experimental extension now combines goalkeeper-line and encroachment checking on the same kick frame
+
+## What To Say About The Combined Extension
+
+Use this wording:
+
+- `This part is not our final adopted method, but it shows that the same project can already support two officiating checks on the same penalty moment.`
+- `The top half shows goalkeeper line compliance, and the bottom half shows potential player encroachment around the penalty-area front line.`
+- `We validated the goalkeeper part on the original thesis labels and we ran a smaller manual validation for encroachment.`
+- `The extension is promising, but the final thesis contribution remains the goalkeeper goal-line support pipeline.`

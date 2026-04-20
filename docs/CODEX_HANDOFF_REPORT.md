@@ -1,267 +1,213 @@
 # Codex Handoff Report
 
-This file is a practical handoff for another Codex instance working on this repository.
+This file is the practical handoff for another Codex instance working on this repository after the April supervisor meeting.
 
-## Repository / GitHub state
+## Current Project Position
 
-- Workspace: `C:\Users\user\Documents\GitHub\penalty-keeper-detection`
-- Branch: `main`
-- Remote: `origin = https://github.com/VeelourS/Thesis-AI-Based-Decision-Support-for-Goalkeeper-Goal-Line-Infringements-in-Football-Penalty-Kicks.git`
-- Latest pushed commit: `0fdae85`
-- Latest pushed commit message: `Organize thesis pipeline and add evaluation tooling`
+The project is in the **wrap-up and presentation** phase, not the exploratory phase.
 
-The repository was cleaned up and pushed to GitHub. Legacy duplicates were archived instead of deleted.
+The final adopted thesis contribution is:
 
-## Thesis scope currently assumed
+`single-camera penalty clip -> automatic kick detection -> kick-frame adjust (-1) -> YOLO goalkeeper/ball detection -> goal-line geometry -> uncertainty-aware decision`
 
-- Main method: `YOLO-based pipeline`
-- Secondary / future work: `encroachment`
-- Current main goal: detect goalkeeper goal-line infringement around penalty kick moment
+This is the main result that should anchor the report, demo, and presentation.
 
-Current intended final operational pipeline:
+## What Is Final vs What Is Extension
 
-`video -> automatic kick detection -> frame adjust (-1) -> YOLO goalkeeper/ball -> line logic -> uncertainty policy -> decision`
+### Final adopted thesis method
 
-## Current best pipeline configuration
-
-The strongest tested version so far is:
-
-- `auto kick detection`
+- automatic kick detection
 - `kick-frame-adjust = -1`
-- `YOLO detect`
-- `line logic`
-- `uncertainty policy`
-- `without pose override` as the main thesis result
+- YOLO goalkeeper + ball detection
+- goal-line geometric reasoning
+- explicit uncertainty output
 
-This version currently performs better than the pose-assisted variants.
+### Investigated but rejected refinement
 
-## Key quantitative results
+- pose estimation
 
-### 1. YOLO detection test
+Current thesis position on pose:
 
-Source:
-- `runs/detect/runs/evaluation/yolo_train4_test88_direct/evaluation_summary.json`
+- pose was tested seriously
+- some individual frames looked promising
+- repeated end-to-end tests degraded performance
+- pose is **not** part of the final adopted method
 
-Metrics on YOLO test split (`88` images):
-- overall precision: `0.909`
-- overall recall: `0.779`
-- overall mAP50: `0.813`
-- overall mAP50-95: `0.462`
+### Experimental extension
 
-Per class:
-- goalkeeper: `P=0.992`, `R=1.000`, `mAP50=0.995`
-- ball: `P=0.826`, `R=0.558`, `mAP50=0.631`
+- player encroachment detection
+- combined officiating runner that checks goalkeeper line compliance and encroachment on the same kick frame
 
-Interpretation:
-- goalkeeper detection is strong
-- ball detection is weaker and is the main limitation for kick detection
+This extension is worth showing, but it should still be framed as:
 
-### 2. Kick detection
+- promising
+- partially validated
+- outside the final adopted thesis core
 
-Source:
-- baseline: `runs/evaluation/kick_detection_eval/summary.json`
-- improved: `runs/evaluation/kick_detection_eval_m1/summary.json`
+## Key Quantitative Results
 
-Important result:
-- `frame_adjust = -1` improved kick timing metrics and also improved the final end-to-end pipeline
-
-`kick_detection_eval_m1`:
-- success rate: `0.923`
-- exact accuracy: `0.264`
-- within ±1 frame: `0.582`
-- within ±2 frames: `0.725`
-- median absolute error: `1` frame
-
-Interpretation:
-- automatic kick detection works often enough to be part of the final pipeline
-- it tends to pick a slightly late frame, which is why `-1` was introduced
-
-### 3. Final pipeline results
-
-#### Best no-pose version
+### 1. Final goalkeeper-line pipeline
 
 Source:
-- batch CSV: `runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test_pipeline_batch_results.csv`
-- report: `runs/evaluation/final_pipeline_batch_test_auto_kick_m1/abstaining_report/report.md`
+- [test_pipeline_batch_summary.json](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/final_pipeline_batch_test_auto_kick_m1/test_pipeline_batch_summary.json)
 
-Metrics:
-- total clips: `22`
+Current best result:
+- clips attempted: `22`
 - pipeline ok: `21`
-- one failure: `2015-09-20_-_16-00_Genoa_0_-_2_Juventus_H2_000875s_KICK.mp4`
-- coverage: `0.909`
-- selective accuracy: `0.900`
-- lower-bound accuracy: `0.818`
-- precision(violation): `0.800`
-- recall(violation): `1.000`
-- F1(violation): `0.889`
+- pipeline failed: `1`
+- exact match rate: `0.857`
+- coverage: `0.905`
 
-This is currently the most defensible thesis result.
+Important derived thesis interpretation:
+- the final system is strongest as a **decision-support** tool
+- uncertainty is deliberate and should be presented as a strength, not a weakness
 
-#### Manual/oracle-ish frame batch
+### 2. Detector comparison
 
-Source:
-- `runs/evaluation/final_pipeline_batch_test/abstaining_report/report.md`
+Primary thesis detector:
+- [yolo_train4_test88_direct](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/detect/runs/evaluation/yolo_train4_test88_direct/evaluation_summary.json)
 
-This was useful as a comparison point, but `auto_kick_m1` is now the preferred operational setup.
+Newer comparison detector:
+- [yolo26n_test88_direct](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/detect/runs/evaluation/yolo26n_test88_direct/evaluation_summary.json)
 
-## Pose estimation status
+Interpretation:
+- YOLO26n improved pure detection metrics, especially for the ball
+- but it did **not** beat the best final end-to-end goalkeeper-line pipeline
+- this is a useful thesis result: better low-level metrics do not automatically produce better final rule decisions
 
-Pose estimation was investigated extensively and is already wired into the pipeline, but it is not yet good enough to replace the main result.
+### 3. Encroachment validation
 
-### YOLO pose integration status
+Best current GT-based combined batch:
+- [combined_officiating_gt_test_v4](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/combined_officiating_gt_test_v4)
 
-Relevant files:
-- `scripts/pose/pose_refinement.py`
-- `scripts/pose/run_yolo_pose_inference.py`
-- `scripts/pipeline/run_full_penalty_pipeline.py`
+Summary:
+- [test_combined_officiating_summary.json](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/combined_officiating_gt_test_v4/test_combined_officiating_summary.json)
 
-What was done:
-- crop-based pose pilot
-- larger crop v2 pilot
-- full-frame fallback
-- overlap-based person selection
-- pose-guided foot point integration into the decision pipeline
-- support-ankle selection
-- leg-extension heuristic to approximate contact point from ankle + knee
+Current result:
+- clips attempted: `13`
+- pipeline ok: `13`
+- goalkeeper exact match rate: `0.769`
+- encroachment decisions:
+  - `encroachment = 12`
+  - `uncertain = 1`
 
-What happened:
-- initial pose integration had almost no effect because bbox still dominated
-- then pose was made dominant, but this hurt metrics badly
-- even after refining support-ankle and ground-contact heuristics, the pose-assisted versions remained worse than the best no-pose pipeline
+Manual encroachment validation on the labeled subset:
+- [encroachment_gt_eval_v5](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/encroachment_gt_eval_v5)
+- [encroachment_eval_summary.json](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/encroachment_gt_eval_v5/encroachment_eval_summary.json)
 
-Important tested pose-assisted runs:
-- `runs/evaluation/final_pipeline_batch_test_auto_kick_m1_pose_v2`
-- `runs/evaluation/final_pipeline_batch_test_auto_kick_m1_pose_v3`
-- `runs/evaluation/final_pipeline_batch_test_auto_kick_m1_pose_v4`
-- `runs/evaluation/final_pipeline_batch_test_auto_kick_m1_pose_v5`
+Current labeled-subset result:
+- labeled samples: `6`
+- exact match rate: `0.833`
+- non-uncertain coverage: `0.833`
+- selective accuracy: `1.000`
+- precision: `1.000`
+- recall: `1.000`
+- F1: `1.000`
 
-Current conclusion:
-- pose is technically integrated
-- pose affects the decision
-- but current YOLO pose variants degrade the final thesis metrics
+## Important Methodological Conclusions
 
-### MediaPipe pilot status
+### Goalkeeper line module
 
-Relevant file:
-- `scripts/pose/run_mediapipe_pose_pilot.py`
+The main remaining limitation is not generic object detection anymore, but:
 
-MediaPipe package was installed locally during work, but the pilot is blocked until the model asset is placed in:
+- geometric ambiguity
+- kick-frame sensitivity
+- the fact that the bottom of the goalkeeper bounding box is only a proxy for the real foot-ground contact point
 
-- `models/mediapipe/pose_landmarker.task`
+Important known failure example:
+- airborne-foot case from `Extra Pen 2`
+- this should be used in the report as a real limitation of bbox-bottom proxy logic
 
-Current status:
-- script exists and targets the newer `mediapipe.tasks` API
-- user attempted to run it
-- current blocker is missing model file, not missing code
+### Encroachment module
 
-Expected command once the model is available:
+The main remaining limitations are:
 
-```powershell
-python scripts/pose/run_mediapipe_pose_pilot.py `
-  --source runs/pose/pilot_crops_line_logic_eval_v2 `
-  --out-dir runs/pose/mediapipe_pilot_v1 `
-  --model-asset-path models/mediapipe/pose_landmarker.task
-```
+- penalty-area line geometry in difficult views
+- player separation in crowded frames
+- occasional wrong kicker selection in difficult no-ball cases
+- merged or missing player detections from the generic person detector
 
-This is the most promising next step if pose still matters.
+## Files That Matter Most Right Now
 
-## Uncertainty policy status
+### Presentation / demo
 
-Relevant files:
-- `scripts/line_logic/uncertainty_policy.py`
-- `docs/UNCERTAINTY_POLICY.md`
+- [FINAL_RESULTS.md](C:/Users/user/Documents/GitHub/penalty-keeper-detection/docs/FINAL_RESULTS.md)
+- [SUPERVISOR_DEMO.md](C:/Users/user/Documents/GitHub/penalty-keeper-detection/docs/SUPERVISOR_DEMO.md)
+- [SUPERVISOR_TALK_TRACK.md](C:/Users/user/Documents/GitHub/penalty-keeper-detection/docs/SUPERVISOR_TALK_TRACK.md)
 
-This is integrated and should remain part of the final pipeline.
+### Core scripts
 
-It helps convert borderline decisions into `uncertain`, which is important for the assistant-tool framing of the thesis.
+- [run_full_penalty_pipeline.py](C:/Users/user/Documents/GitHub/penalty-keeper-detection/scripts/pipeline/run_full_penalty_pipeline.py)
+- [run_player_encroachment_probe.py](C:/Users/user/Documents/GitHub/penalty-keeper-detection/scripts/pipeline/run_player_encroachment_probe.py)
+- [run_combined_penalty_officiating_pipeline.py](C:/Users/user/Documents/GitHub/penalty-keeper-detection/scripts/pipeline/run_combined_penalty_officiating_pipeline.py)
+- [batch_run_final_pipeline.py](C:/Users/user/Documents/GitHub/penalty-keeper-detection/scripts/evaluation/batch_run_final_pipeline.py)
+- [batch_run_combined_officiating_gt.py](C:/Users/user/Documents/GitHub/penalty-keeper-detection/scripts/evaluation/batch_run_combined_officiating_gt.py)
 
-## Evaluation tooling added
+### Validation / labels
 
-Relevant directory:
-- `scripts/evaluation/`
+- [encroachment_labels.csv](C:/Users/user/Documents/GitHub/penalty-keeper-detection/data/meta/encroachment_labels.csv)
+- [evaluate_encroachment_module.py](C:/Users/user/Documents/GitHub/penalty-keeper-detection/scripts/evaluation/evaluate_encroachment_module.py)
+- [label_encroachment.py](C:/Users/user/Documents/GitHub/penalty-keeper-detection/scripts/pipeline/label_encroachment.py)
 
-Important scripts:
-- `run_yolo_detection_eval.py`
-- `evaluate_kick_detection.py`
-- `batch_run_final_pipeline.py`
-- `binary_classifier_report.py`
-- `abstaining_classifier_report.py`
-- `summarize_label_balance.py`
-- `audit_yolo_dataset.py`
-- `build_canonical_yolo_metadata.py`
+## What The Next Chat Should Do
 
-This tooling is already part of the repo and should be reused, not rewritten.
+The next best steps are **not** more big modeling experiments.
 
-## Data / repo organization status
+Priority order:
 
-Key changes already done:
-- legacy nested scripts moved to `scripts/archive/`
-- backup metadata moved to `data/archive/`
-- top-level docs added
-- `.gitignore` updated to ignore:
-  - `runs/`
-  - `data/raw/`
-  - `data/clips/`
-  - `*.cache`
-  - `yolov8n-pose.pt`
-  - `models/mediapipe/*.task`
+1. keep the final goalkeeper-line thesis method fixed
+2. improve the report and presentation assets
+3. add or refine flowcharts for:
+   - full goalkeeper pipeline
+   - kick detection
+   - encroachment / combined extension
+4. polish the written interpretation under tables and figures
+5. prepare defense/demo talking points
 
-Canonical metadata file created:
-- `data/yolo_gk_ball/meta/frames_metadata_canonical.csv`
+Only do more coding if it directly improves:
 
-YOLO test labels were added:
-- `data/yolo_gk_ball/labels/test/...`
+- reproducibility
+- presentation quality
+- diagrams / outputs
+- small targeted robustness fixes
 
-## Supervisor-related methodology notes
+Avoid:
 
-Supervisor feedback that already shaped the work:
-- accuracy alone is not enough
-- class priors matter
-- confusion matrix / precision / recall / F1 are necessary
-- no-skill baselines matter
-- pose estimation was suggested as a potentially stronger proxy than bbox bottom points
+- custom pose models
+- major architecture changes
+- new large-scale feature additions
+- turning encroachment into the new thesis core
 
-The current repo reflects that:
-- class-balance reporting exists
-- abstaining classifier reports exist
-- no-skill comparisons were prepared
-- pose was investigated but not yet validated as better than bbox
+## What The Next Chat Needs
 
-## What to tell a new Codex to do next
+The next chat will need:
 
-Recommended order:
+- the current final quantitative numbers from the files linked above
+- awareness that pose is already a rejected refinement
+- awareness that YOLO26n is a comparison result, not the final winner
+- awareness that encroachment is an extension, not the main thesis contribution
+- awareness that the supervisor explicitly asked for:
+  - more flowcharts
+  - clearer algorithm explanation
+  - stronger figure/table interpretation
+  - well-explained external examples
 
-1. Treat `auto_kick_m1` without pose as the current best thesis result.
-2. Do not keep tuning YOLO pose unless there is a very strong reason.
-3. If pose is still a priority, run the MediaPipe pilot after adding `models/mediapipe/pose_landmarker.task`.
-4. Compare MediaPipe heel / foot-index landmarks against:
-   - bbox proxy
-   - current YOLO pose
-5. Only if MediaPipe clearly helps, integrate it conservatively into the pipeline.
-6. Otherwise, keep pose in:
-   - investigated alternative
-   - limitations / future improvement
+## Current Supervisor-Aligned Narrative
 
-## Useful files for quick orientation
+Use this framing:
 
-- `README.md`
-- `docs/PROJECT_MAP.md`
-- `docs/CANONICAL_WORKFLOW.md`
-- `docs/EVALUATION_GUIDE.md`
-- `docs/FINAL_RESULTS.md`
-- `docs/UNCERTAINTY_POLICY.md`
-- `scripts/pipeline/run_full_penalty_pipeline.py`
-- `scripts/evaluation/batch_run_final_pipeline.py`
-- `scripts/kick_detection/ball_motion_detector.py`
-- `scripts/pose/pose_refinement.py`
-- `scripts/pose/run_mediapipe_pose_pilot.py`
+- the main thesis result is a single-camera referee-support pipeline for goalkeeper goal-line infringements
+- the pipeline is uncertainty-aware and designed to support human review
+- pose and YOLO26n were investigated and reported honestly
+- encroachment is an additional achievement discovered and developed during the project
+- the report should focus on methodology, results, discussion, and clear visual explanation
 
-## Important caution
+## Important Safety / Collaboration Note
 
-The user explicitly asked multiple times not to delete project content.
+The user repeatedly asked not to delete content.
 
-Safe pattern:
-- archive instead of delete
-- preserve old experiments
-- avoid destructive git/file operations
+Safe working style:
 
+- preserve experiments
+- archive instead of delete when possible
+- avoid destructive file or git operations

@@ -142,16 +142,78 @@ Interpretation:
 
 ## 5. Pose Estimation Status
 
-Pose estimation was tested as a possible foot-localization refinement.
+Pose estimation was tested repeatedly as a possible lower-body and foot-localization refinement.
 
 Relevant outputs:
 - `runs/pose/pilot_yolo_pose_v2/`
 - `runs/pose/pose_pilot_review_sheet_fresh_pose.csv`
+- `runs/evaluation/final_pipeline_batch_test_auto_kick_m1_pose/`
+- `runs/evaluation/final_pipeline_batch_test_yolo26n_auto_kick_m1_pose/`
 
 Observed status:
-- some individual pose outputs look promising
-- overall pose coverage remains too low to replace the current method globally
+- some individual pose outputs look visually promising
+- repeated end-to-end tests did not improve the final decision pipeline
+- on the stronger YOLO26n detector, pose still reduced end-to-end performance rather than improving it
 
 Current project decision:
-- pose is not the primary final method
-- it remains a targeted refinement idea for hard cases, especially false positives and `uncertain` cases
+- pose is not part of the final adopted thesis method
+- pose should be presented as an investigated refinement that was rejected after evaluation
+- this is an important negative result, not a hidden unfinished feature
+
+## 6. Experimental Encroachment Extension
+
+In addition to the final goalkeeper-line pipeline, the repository now includes an experimental encroachment module and a combined penalty-officiating runner.
+
+Key scripts:
+- [run_player_encroachment_probe.py](C:/Users/user/Documents/GitHub/penalty-keeper-detection/scripts/pipeline/run_player_encroachment_probe.py)
+- [run_combined_penalty_officiating_pipeline.py](C:/Users/user/Documents/GitHub/penalty-keeper-detection/scripts/pipeline/run_combined_penalty_officiating_pipeline.py)
+- [batch_run_combined_officiating_gt.py](C:/Users/user/Documents/GitHub/penalty-keeper-detection/scripts/evaluation/batch_run_combined_officiating_gt.py)
+
+What the extension does:
+- reuses the same penalty clip and kick frame
+- runs goalkeeper line checking and player encroachment checking on the same moment
+- produces one combined overlay and one combined JSON/CSV per clip
+
+Latest GT-based combined batch:
+- [test_combined_officiating_summary.json](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/combined_officiating_gt_test_v4/test_combined_officiating_summary.json)
+
+Current combined batch result on the `test` subset:
+- clips attempted: `13`
+- pipeline ok: `13`
+- goalkeeper decisions:
+  - `on_line = 8`
+  - `off_line = 3`
+  - `uncertain = 2`
+- goalkeeper exact match rate: `0.769`
+- encroachment decisions:
+  - `encroachment = 12`
+  - `uncertain = 1`
+
+Manual encroachment validation on the currently labeled subset:
+- [encroachment_eval_summary.json](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/encroachment_gt_eval_v5/encroachment_eval_summary.json)
+
+Current labeled-subset metrics:
+- labeled samples: `6`
+- exact match rate over all labeled samples: `0.833`
+- non-uncertain coverage: `0.833`
+- selective accuracy on certain predictions: `1.000`
+- encroachment precision: `1.000`
+- encroachment recall: `1.000`
+
+Interpretation:
+- the encroachment extension now works meaningfully on real penalty clips
+- it is much stronger than the earlier probe version
+- however, it should still be presented as an experimental extension rather than part of the final adopted thesis method
+
+## 7. Bottom-Line Thesis Position
+
+The thesis contribution should be presented in this order:
+
+1. the adopted goalkeeper goal-line decision-support pipeline
+2. the evaluation evidence showing that `train4 + auto-kick -1 + uncertainty` is still the best final end-to-end variant
+3. the supporting comparison showing that better detector metrics do not automatically yield better final rule decisions
+4. the experimental encroachment extension as future-facing work built on the same project foundation
+
+The cleanest one-sentence project summary is:
+
+`This thesis delivers a single-camera YOLO-based referee-support pipeline for goalkeeper goal-line infringements, and also shows that the same framework can be extended toward combined officiating checks such as player encroachment.`

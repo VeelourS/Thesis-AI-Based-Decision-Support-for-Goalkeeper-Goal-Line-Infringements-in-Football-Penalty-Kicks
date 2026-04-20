@@ -17,7 +17,7 @@ The module is still heuristic and exploratory, but it now produces a proper deci
 - jersey-color outlier filtering to suppress likely referee detections
 - encroachment candidate selection for non-kicker, non-goalkeeper likely-players near the penalty-area front line
 
-The output is intended for qualitative review and exploratory validation, not yet for final quantitative reporting.
+The output is intended for exploratory validation and supervisor demos. It is stronger than the initial probe version, but it is still not the final adopted thesis method.
 
 ## Current Decision Outputs
 
@@ -45,6 +45,8 @@ python scripts/pipeline/run_player_encroachment_probe.py `
   --kick-window-start-s 0.0 `
   --kick-window-end-s 5.0 `
   --kick-frame-adjust -1 `
+  --player-conf 0.15 `
+  --player-imgsz 1280 `
   --out-root runs/encroachment
 ```
 
@@ -61,13 +63,15 @@ The cleanest validation path is:
 ```powershell
 python scripts/evaluation/batch_run_encroachment_gt.py `
   --split test `
-  --out-dir runs/evaluation/encroachment_gt_test
+  --out-dir runs/evaluation/encroachment_gt_test_full_v5
 ```
 
 ### 2. Label encroachment ground truth
 
 ```powershell
-python scripts/pipeline/label_encroachment.py
+python scripts/pipeline/label_encroachment.py `
+  --results-csv runs/evaluation/encroachment_gt_test_full_v5/test_encroachment_gt_results.csv `
+  --out-csv data/meta/encroachment_labels.csv
 ```
 
 This writes:
@@ -78,10 +82,32 @@ This writes:
 
 ```powershell
 python scripts/evaluation/evaluate_encroachment_module.py `
-  --results-csv runs/evaluation/encroachment_gt_test/test_encroachment_gt_results.csv `
+  --results-csv runs/evaluation/encroachment_gt_test_full_v5/test_encroachment_gt_results.csv `
   --labels-csv data/meta/encroachment_labels.csv `
-  --out-dir runs/evaluation/encroachment_gt_eval
+  --out-dir runs/evaluation/encroachment_gt_eval_v5
 ```
+
+## Current Best Validation Snapshot
+
+Latest GT batch:
+- [encroachment_gt_test_full_v5](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/encroachment_gt_test_full_v5)
+
+Latest evaluation on the currently labeled subset:
+- [encroachment_gt_eval_v5](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/encroachment_gt_eval_v5)
+- [encroachment_eval_summary.json](C:/Users/user/Documents/GitHub/penalty-keeper-detection/runs/evaluation/encroachment_gt_eval_v5/encroachment_eval_summary.json)
+
+Current labeled-subset result:
+- labeled samples: `6`
+- exact match rate: `0.833`
+- non-uncertain coverage: `0.833`
+- selective accuracy: `1.000`
+- precision: `1.000`
+- recall: `1.000`
+- F1: `1.000`
+
+Current GT batch decision counts:
+- `encroachment = 12`
+- `uncertain = 1`
 
 ## Outputs
 
@@ -101,15 +127,17 @@ Example outputs:
 ## Current Strengths
 
 - The module runs end-to-end on real penalty clips.
-- It no longer marks obvious off-field detections as encroachment by default.
+- It is much better than the first probe version at rejecting obvious off-field detections.
 - It now returns an explicit final decision with a reason code.
 - It can isolate plausible candidate players near the top of the penalty area.
 - It is reusable on both thesis clips and external clips.
+- It supports temporal refinement over nearby frames when the first chosen frame is weak.
 
 ## Current Limitations
 
 - The `person` detector still sees referees and some people near the sidelines or behind the goal.
 - Team identity is not modeled, so the module cannot yet distinguish attackers from defenders.
+- Kicker selection can still fail in some no-ball cases.
 - Kick-frame quality still depends on the ball detector and can drift on difficult clips.
 - The selected line is a penalty-area front-line heuristic, not a calibrated field model.
 - Results should still be interpreted conservatively even though the module now emits a final decision label.
@@ -120,4 +148,4 @@ This module is best presented as:
 
 - an exploratory extension beyond the final adopted goalkeeper-line pipeline
 - evidence that encroachment detection is technically approachable with the same YOLO-based toolchain
-- a direction for future work rather than a validated final subsystem
+- a promising, partially validated extension rather than a fully validated final subsystem
