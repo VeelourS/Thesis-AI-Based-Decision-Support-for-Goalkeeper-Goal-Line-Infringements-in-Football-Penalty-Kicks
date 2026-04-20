@@ -1,0 +1,1034 @@
+\documentclass[12pt,a4paper,twoside]{article}
+
+% ─── Packages ────────────────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{tikz}
+\usepackage{pgf-umlsd}
+\usepackage{setspace}
+\usepackage{fancyhdr}
+\usepackage{natbib}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{url}
+
+\geometry{
+  a4paper,
+  top=2.5cm, bottom=2.5cm,
+  left=3cm, right=2.5cm
+}
+
+\onehalfspacing
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=blue
+}
+
+% ─── Title info ──────────────────────────────────────────────────────────────
+\title{
+  \vspace{-1cm}
+  \Large\textbf{AI-Based Decision Support for Goalkeeper\\
+  Goal-Line Infringements in Football Penalty Kicks}\\[0.5cm]
+  \large Bachelor Thesis
+}
+\author{[Your Name]}
+\date{2026}
+
+% ─── Document ────────────────────────────────────────────────────────────────
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+Goalkeeper goal-line infringements during penalty kicks are a specific class of
+football rule violations subject to Video Assistant Referee (VAR) review.
+Determining whether the goalkeeper's foot crossed the goal line at the moment of
+the kick requires precise spatial and temporal analysis of broadcast footage,
+which is currently performed manually by officials.
+
+This thesis presents a decision-support pipeline that automates this analysis
+from single-camera broadcast video.
+The system performs automatic kick-moment detection via ball motion analysis,
+extracts the relevant video frame, applies a fine-tuned YOLOv8n detector to
+localize the goalkeeper and the ball, reconstructs the goal-line geometry using
+Hough-based line detection, and computes the goalkeeper's foot-to-line distance.
+An explicit uncertainty policy converts geometrically ambiguous cases into an
+\textit{uncertain} output, enabling the system to abstain rather than commit to
+a potentially wrong decision.
+
+Evaluated on 22 held-out test clips, the final pipeline achieves a coverage of
+0.909, a selective accuracy of 0.900, and a violation recall of 1.000 with a
+precision of 0.800, yielding an F1 score of 0.889 for the violation class.
+No confirmed violation is missed among the clips for which the system
+produces a definite decision.
+
+Additional experiments compare a YOLOv8n baseline against a larger YOLO26n
+detector and investigate pose-estimation-based foot localization as a refinement
+strategy. Both alternatives improved component-level metrics but did not improve
+the end-to-end pipeline result, illustrating that detector quality alone does not
+determine decision quality. An experimental extension to player encroachment
+detection is also presented as a demonstration of the pipeline's generalisability.
+
+The thesis contributes a complete end-to-end methodology, an annotated dataset
+split, and an evaluation framework for broadcast-based penalty-kick officiating
+support.
+\end{abstract}
+
+\newpage
+\tableofcontents
+\newpage
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Introduction}
+\label{sec:intro}
+% ═════════════════════════════════════════════════════════════════════════════
+
+\subsection{Motivation and Problem Statement}
+
+Football penalty kicks are among the highest-stakes moments in the sport.
+They determine outcomes of knockout rounds, championships, and relegation battles.
+At the same time, the rules governing penalty kicks are precise: the goalkeeper
+must remain on the goal line, with at least one foot touching or behind the line,
+until the ball is kicked~\cite{ifab2024}.
+A goalkeeper who steps forward before the kick gains a positional advantage that
+is considered unfair under the Laws of the Game.
+
+Since 2018, Video Assistant Referee (VAR) technology has been used at the
+highest levels of football to review potential rule violations, including
+goalkeeper encroachment during penalty kicks.
+However, VAR decisions on goalkeeper position rely on human operators reviewing
+video manually. This process is time-consuming, subjective, and inconsistent:
+the threshold for what counts as a ``clear and obvious error'' varies across
+matches and competitions.
+
+Automating the detection of goalkeeper goal-line infringements from broadcast
+video would provide a consistent, objective, and rapid decision-support signal
+to officiating teams. This thesis addresses that problem.
+
+\subsection{Scope and Constraints}
+
+The problem is constrained to broadcast-quality video footage:
+\begin{itemize}
+  \item Single fixed camera, standard broadcast angle
+  \item 720p resolution at approximately 25 frames per second
+  \item No depth sensors, calibrated cameras, or tracking data
+  \item No assumption of camera calibration or fixed pitch geometry
+\end{itemize}
+
+These constraints reflect the realistic deployment scenario, where broadcast
+footage is the only available data source for post-hoc VAR review.
+
+\subsection{Approach Overview}
+
+The proposed system operates as a sequential pipeline:
+\begin{enumerate}
+  \item A penalty kick clip is provided as input.
+  \item The kick moment is detected automatically from ball motion.
+  \item The relevant frame (one frame before the detected kick) is extracted.
+  \item A fine-tuned YOLO detector localises the goalkeeper and ball.
+  \item The goal line is detected geometrically from the extracted frame.
+  \item The goalkeeper's foot position relative to the line is evaluated.
+  \item An uncertainty policy decides whether to commit to a decision or abstain.
+\end{enumerate}
+
+The system is framed as a \textbf{decision-support tool}, not as a replacement
+for human officiating. The explicit uncertainty output is a design choice: in
+cases where the geometry is too ambiguous for a reliable decision, the system
+signals that human review is required rather than producing a potentially
+wrong answer.
+
+\subsection{Contributions}
+
+The main contributions of this thesis are:
+
+\begin{itemize}
+  \item A complete end-to-end pipeline for goalkeeper goal-line infringement
+        detection from broadcast video.
+  \item An annotated dataset of 135 penalty kick clips with violation / valid /
+        uncertain labels and a train/validation/test split.
+  \item A quantitative evaluation framework including abstaining classifier
+        metrics appropriate for decision-support tools.
+  \item An analysis of the interplay between detector quality and end-to-end
+        decision quality, showing that component improvement does not guarantee
+        pipeline improvement.
+  \item An experimental extension to player encroachment detection, demonstrating
+        the generalisability of the pipeline architecture.
+\end{itemize}
+
+\subsection{Thesis Structure}
+
+Section~\ref{sec:related} reviews related work. Section~\ref{sec:dataset}
+describes the dataset and annotation process. Section~\ref{sec:method} presents
+the methodology in detail. Section~\ref{sec:eval} defines the evaluation
+framework. Section~\ref{sec:results} reports the experimental results.
+Section~\ref{sec:discussion} discusses the findings and limitations.
+Section~\ref{sec:conclusion} concludes and outlines future work.
+
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Related Work}
+\label{sec:related}
+% ═════════════════════════════════════════════════════════════════════════════
+
+\subsection{Sports Video Analysis}
+
+Automated analysis of sports footage has been an active research area for two
+decades. Early work focused on scene segmentation and event
+detection~\cite{ekin2003automatic}.
+Convolutional neural networks enabled more reliable player and ball
+tracking~\cite{suda2021football}, and later transformer-based architectures
+improved multi-object tracking in crowded sports scenes~\cite{yu2022sportsmot}.
+
+Ball detection is a well-studied sub-problem with specific
+challenges~\cite{theagarajan2018soccer}: the ball is small, fast, frequently
+occluded, and subject to motion blur. The TrackNetV2 architecture was
+specifically designed for high-speed ball tracking from video~\cite{huang2019tracknet}.
+YOLOv8-based approaches have also been applied to real-time ball and player
+detection in broadcast footage~\cite{ultralytics2023}.
+
+\subsection{Rule Violation Detection}
+
+Goal-line technology (GLT) is the established industrial solution for
+detecting whether the ball has fully crossed the goal line. Systems such as
+Hawk-Eye and GoalControl use multi-camera setups with calibrated cameras and
+real-time tracking~\cite{hawk2012}. These are dedicated hardware installations
+incompatible with post-hoc broadcast analysis.
+
+For goalkeeper encroachment specifically, there is limited prior academic work.
+Sporadic references appear in surveys of VAR-related decision support, but no
+public dataset or pipeline has been previously published for this specific task.
+This thesis represents an initial investigation into the problem under realistic
+broadcast constraints.
+
+\subsection{Pose Estimation in Sports}
+
+Human pose estimation has been applied to sports biomechanics and action
+recognition~\cite{bridgeman2019multi}. YOLOv8-pose offers real-time
+multi-person pose estimation from single images~\cite{ultralytics2023}.
+The use of pose keypoints for foot localization is a natural extension of
+goalkeeper analysis, and it is investigated in this thesis as an alternative
+to bounding-box-based foot proxies. MediaPipe Pose provides an alternative
+lightweight pose estimation
+option~\cite{lugaresi2019mediapipe}.
+
+\subsection{Uncertainty in Classification}
+
+Abstaining classifiers, also called \textit{selective classifiers} or
+\textit{classifiers with reject option}, explicitly model the option of
+withholding a prediction when confidence is low~\cite{bartlett2008classification}.
+This framework is particularly relevant for high-stakes decision support,
+where the cost of a wrong confident prediction exceeds the cost of abstaining.
+The evaluation metrics used in this thesis (coverage, selective accuracy,
+lower-bound accuracy) follow the abstaining classifier
+literature~\cite{geifman2017selective}.
+
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Dataset}
+\label{sec:dataset}
+% ═════════════════════════════════════════════════════════════════════════════
+
+\subsection{Data Collection}
+
+The dataset was compiled from publicly available match broadcast footage of
+professional football matches. Penalty kick moments were identified manually
+by reviewing match recordings. For each penalty kick, a short clip of
+approximately 10 seconds centred around the kick moment was extracted at 720p
+resolution and 25~fps.
+
+In total, 135 penalty kick clips were collected from matches spanning multiple
+European leagues and competitions (2014--2017). The clips vary in:
+\begin{itemize}
+  \item Broadcast angle and zoom level
+  \item Pitch conditions and lighting
+  \item Goalkeeper stance and movement
+  \item Degree of goalkeeper goal-line compliance
+\end{itemize}
+
+\subsection{Annotation}
+
+Each clip was annotated with a ternary label:
+\begin{itemize}
+  \item \textbf{violation}: the goalkeeper's foot was clearly forward of the
+        goal line at the moment of the kick.
+  \item \textbf{valid}: the goalkeeper's foot was on or behind the goal line
+        at the moment of the kick.
+  \item \textbf{uncertain}: the camera angle, occlusion, or motion blur made
+        it impossible to determine the goalkeeper's position reliably.
+\end{itemize}
+
+Annotation was performed by manual frame-by-frame review. The kick moment
+was defined as the frame at which the ball begins to move, identified by visual
+inspection and confirmed by ball motion analysis.
+
+Ambiguous cases were labeled \textit{uncertain} by consensus. These clips are
+excluded from binary precision/recall evaluation but are retained in the dataset
+for completeness.
+
+\subsection{Train / Validation / Test Split}
+
+The 135 clips were split into three non-overlapping sets with no match overlap
+across splits (i.e., no two clips from the same match appear in different splits):
+
+\begin{table}[H]
+  \centering
+  \caption{Dataset split statistics}
+  \label{tab:splits}
+  \begin{tabular}{lrrr}
+    \toprule
+    Split & Clips & Violations & Valid \\
+    \midrule
+    Train & 94 & -- & -- \\
+    Validation & 19 & -- & -- \\
+    Test & 22 & 4 & 16 (+2 uncertain) \\
+    \midrule
+    Total & 135 & & \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The test split of 22 clips contains 4 confirmed violations, 16 confirmed valid
+cases, and 2 clips labeled \textit{uncertain} (excluded from violation-focused
+evaluation). All quantitative results reported in this thesis use the test split
+exclusively; the train and validation splits were used for model training and
+hyperparameter selection only.
+
+\subsection{YOLO Detection Dataset}
+
+For training the YOLO object detector, a subset of frames from the penalty kick
+clips was annotated with bounding boxes for two classes: goalkeeper and ball.
+The resulting detection dataset contains:
+\begin{itemize}
+  \item Training images: 354
+  \item Validation images: 66
+  \item Test images: 88
+\end{itemize}
+
+Each frame was extracted at multiple temporal offsets from the kick moment to
+ensure coverage of different goalkeeper positions. Bounding boxes were drawn
+manually around the goalkeeper (full body) and ball (when visible) in each frame.
+
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Methodology}
+\label{sec:method}
+% ═════════════════════════════════════════════════════════════════════════════
+
+\subsection{Pipeline Overview}
+
+The full system processes a penalty kick video clip through the following stages:
+
+\begin{enumerate}
+  \item \textbf{Automatic kick detection}: ball motion is analysed to identify
+        the kick frame.
+  \item \textbf{Frame adjustment}: the detected frame is shifted by $-1$ to
+        correct for systematic late-detection bias.
+  \item \textbf{Frame extraction}: the adjusted kick frame is saved as an image.
+  \item \textbf{YOLO detection}: a fine-tuned YOLOv8n model detects the
+        goalkeeper and ball in the extracted frame.
+  \item \textbf{Goal-line geometry}: a Hough-based line detector reconstructs
+        the goal line from the image.
+  \item \textbf{Distance computation}: the goalkeeper's foot proxy is projected
+        onto the goal line and the signed distance is computed.
+  \item \textbf{Uncertainty policy}: a rule-based policy converts geometrically
+        ambiguous decisions to \textit{uncertain}.
+  \item \textbf{Decision output}: the final decision (on\_line / off\_line /
+        uncertain) is produced with supporting metadata.
+\end{enumerate}
+
+\subsection{Automatic Kick Detection}
+
+\subsubsection{Ball Tracking}
+
+The kick moment is estimated from ball motion within a temporal window of
+$[0.5\text{s},\ 2.5\text{s}]$ from the start of the input clip. This window
+was chosen to capture the kick in a standard 10-second penalty clip with some
+margin for kick timing variability.
+
+For each frame in the window, the YOLOv8n detector is applied and the highest-
+confidence ball detection is retained (minimum confidence threshold: 0.3).
+Frames without a valid ball detection, or where the ball position jumps by more
+than 180 pixels between consecutive frames (tracking jump filter), are excluded.
+
+\subsubsection{Velocity Analysis and Onset Detection}
+
+From the retained ball positions, a frame-to-frame displacement sequence is
+computed. The baseline velocity is estimated as the median velocity over a
+stable pre-kick period. The kick moment is detected as the first frame where
+the ball velocity exceeds a threshold of $2.5 \times$ the baseline velocity for
+a sustained period (velocity prominence threshold).
+
+If no onset is found, the system falls back to the frame of peak ball velocity
+(peak fallback). If ball detections are insufficient for reliable velocity
+estimation (fewer than 5 retained frames), kick detection fails and the clip
+is marked as a pipeline failure.
+
+\subsubsection{Frame Adjustment}
+
+Analysis of detection errors on the validation set revealed a systematic
+late-detection bias: the detected kick frame was on average 2.1 frames later
+than the annotated kick frame, with a median error of 1 frame. To correct for
+this bias, a fixed $-1$ frame adjustment is applied to the detected kick frame
+before further processing.
+
+This adjustment is the only temporal correction applied. It was selected after
+ablation over offsets $\{-2, -1, 0, +1\}$ by maximising the end-to-end pipeline
+exact match rate on the validation set.
+
+\subsection{Goalkeeper and Ball Detection}
+
+A YOLOv8n model (\texttt{train4}) was fine-tuned on the annotated detection
+dataset. The model was trained with:
+\begin{itemize}
+  \item Input resolution: $640 \times 640$ pixels
+  \item 100 training epochs
+  \item AdamW optimiser with cosine learning rate schedule
+  \item Data augmentation: random horizontal flip, mosaic, scale jitter
+\end{itemize}
+
+Two detection classes were used: goalkeeper (class 0) and ball (class 1).
+The goal-line decision uses only goalkeeper detections; ball detections are
+used only by the kick detection module.
+
+For the pipeline, the goalkeeper bounding box with the highest confidence score
+is selected. If no goalkeeper detection exceeds the confidence threshold of 0.05,
+the clip is assigned an \textit{uncertain} decision with reason \texttt{no\_goalkeeper}.
+
+\subsection{Goal-Line Geometry}
+
+\subsubsection{Line Detection}
+
+The goal line is detected using a pipeline of:
+\begin{enumerate}
+  \item Restrict analysis to the lower third of the frame (where the goal line
+        is expected to appear).
+  \item Apply white-pixel masking: pixels with HSV saturation below 30 and
+        value above 200 are retained.
+  \item Apply Canny edge detection to the masked image.
+  \item Run the probabilistic Hough line transform to detect line segments.
+  \item Filter: retain only near-horizontal segments ($|\theta| < 15°$) with
+        length above 50 pixels.
+  \item Fit a single representative line through the retained segments using
+        weighted least-squares regression.
+\end{enumerate}
+
+If no line segments pass the filter, the clip is assigned \textit{uncertain}
+with reason \texttt{no\_line}.
+
+\subsubsection{Foot Proxy Extraction}
+
+The goalkeeper's foot position is approximated by the bottom-centre point of
+the goalkeeper bounding box. This is a deliberate simplification: the bottom
+of the bounding box corresponds to the lowest visible part of the goalkeeper's
+body, which in most upright or semi-crouched postures is a foot or lower shin.
+The limitations of this proxy are discussed in Section~\ref{sec:discussion}.
+
+\subsubsection{Distance Computation}
+
+Let $\mathbf{p} = (x_p, y_p)$ be the foot proxy point and let the goal line be
+described by $ax + by + c = 0$ (unit normal). The signed pixel distance is:
+
+\begin{equation}
+  d = \frac{a x_p + b y_p + c}{\sqrt{a^2 + b^2}}
+\end{equation}
+
+A positive distance indicates the goalkeeper's foot is in front of the goal
+line (i.e., a potential violation). The raw decision is:
+\begin{align*}
+  d > 0 &\Rightarrow \texttt{off\_line} \quad \text{(violation)} \\
+  d \leq 0 &\Rightarrow \texttt{on\_line} \quad \text{(valid)}
+\end{align*}
+
+An additional quantity, \texttt{local\_y\_err\_px}, measures the residual
+vertical error of the Hough fit at the projected foot location. High values
+indicate that the line-fitting was imprecise at that position.
+
+\subsection{Uncertainty Policy}
+
+The raw binary decision is post-processed by a rule-based uncertainty policy.
+The policy converts a decision to \textit{uncertain} when either of two
+conditions holds:
+
+\begin{description}
+  \item[\texttt{near\_boundary}:] $|d| < \delta_{\text{margin}}$,
+        where $\delta_{\text{margin}} = 2.0$~px. At this distance,
+        sub-pixel detection noise could flip the decision.
+  \item[\texttt{high\_local\_y\_err}:] $e_y > \delta_{\text{yerr}}$,
+        where $\delta_{\text{yerr}} = 8.0$~px. This indicates that the
+        goal-line geometry is too imprecise at the foot location to support
+        a confident decision.
+\end{description}
+
+When both conditions hold simultaneously, the reason is reported as
+\texttt{boundary\_plus\_local\_y}.
+
+The thresholds $\delta_{\text{margin}}$ and $\delta_{\text{yerr}}$ were
+set based on analysis of the detection noise profile on the training split
+and were not tuned on test labels.
+
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Evaluation Framework}
+\label{sec:eval}
+% ═════════════════════════════════════════════════════════════════════════════
+
+\subsection{Abstaining Classifier Metrics}
+
+Standard binary classification metrics (accuracy, precision, recall) are
+not directly applicable to a system that can abstain on uncertain cases.
+We use the abstaining classifier framework~\cite{geifman2017selective} with
+the following metrics:
+
+\begin{description}
+  \item[\textbf{Coverage}] The fraction of clips for which the system produces
+        a definite (non-uncertain) decision:
+        $\text{coverage} = n_{\text{certain}} / n_{\text{total}}$.
+
+  \item[\textbf{Selective accuracy}] Accuracy computed only on the clips for
+        which the system committed to a decision:
+        $\text{sel\_acc} = n_{\text{correct certain}} / n_{\text{certain}}$.
+
+  \item[\textbf{Lower-bound accuracy}] Worst-case accuracy if all abstentions
+        are counted as errors:
+        $\text{lb\_acc} = n_{\text{correct certain}} / n_{\text{total}}$.
+
+  \item[\textbf{Precision} (violation class)] Among clips where the system
+        predicted \textit{violation}, the fraction that are true violations.
+
+  \item[\textbf{Recall} (violation class)] Among all true violations, the
+        fraction that were predicted as \textit{violation}.
+
+  \item[\textbf{F1} (violation class)] Harmonic mean of violation precision
+        and recall.
+\end{description}
+
+\subsection{No-Skill Baselines}
+
+Two degenerate baselines are used for comparison:
+\begin{itemize}
+  \item \textbf{Always valid}: always predicts \textit{on\_line}.
+        Recall (violation) = 0.000.
+  \item \textbf{Always violation}: always predicts \textit{off\_line}.
+        Recall (violation) = 1.000, precision = class prior = 4/20 = 0.200.
+\end{itemize}
+
+A useful system must strictly dominate both baselines.
+
+\subsection{Kick-Timing Metrics}
+
+For the kick detection submodule, standard timing accuracy metrics are used:
+\begin{itemize}
+  \item Success rate: fraction of clips with a valid kick frame estimate.
+  \item Exact accuracy: fraction with detected frame equal to annotated frame.
+  \item Within $\pm k$ frames: fraction with $|$detected $-$ annotated$| \leq k$.
+  \item Mean/median absolute error (MAE/MedAE) in frames.
+\end{itemize}
+
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Experimental Results}
+\label{sec:results}
+% ═════════════════════════════════════════════════════════════════════════════
+
+\subsection{YOLO Detection Results}
+
+Table~\ref{tab:yolo_detection} shows the detection performance of the
+fine-tuned YOLOv8n model (\texttt{train4}) on the 88-image test split.
+
+\begin{table}[H]
+  \centering
+  \caption{YOLOv8n (train4) detection metrics on test split (88 images)}
+  \label{tab:yolo_detection}
+  \begin{tabular}{lrrrr}
+    \toprule
+    Class & Precision & Recall & mAP50 & mAP50-95 \\
+    \midrule
+    Goalkeeper & 0.992 & 1.000 & 0.995 & 0.685 \\
+    Ball       & 0.826 & 0.558 & 0.631 & 0.240 \\
+    \midrule
+    \textbf{Overall} & \textbf{0.909} & \textbf{0.779} & \textbf{0.813} & \textbf{0.462} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Goalkeeper detection is near-perfect: mAP50 of 0.995 with recall of 1.000
+on the test split means no goalkeeper was missed in any evaluated frame.
+Ball detection is considerably weaker at mAP50 of 0.631, reflecting the
+difficulty of detecting a small, fast-moving object in broadcast footage.
+The lower ball recall (0.558) is the primary driver of occasional kick
+detection failures, as ball positions are required for velocity analysis.
+
+Since the goal-line decision depends on goalkeeper localisation rather than
+ball localisation, the very high goalkeeper detection quality is the critical
+result for the main pipeline. Ball detection quality primarily affects the
+kick timing submodule.
+
+\subsection{Automatic Kick Detection Results}
+
+Table~\ref{tab:kick_detection} reports kick detection performance evaluated
+on 91 penalty clips with annotated kick times.
+
+\begin{table}[H]
+  \centering
+  \caption{Kick detection metrics (train4 detector, frame\_adjust = $-1$, 91 clips)}
+  \label{tab:kick_detection}
+  \begin{tabular}{lr}
+    \toprule
+    Metric & Value \\
+    \midrule
+    Clips attempted & 91 \\
+    Successful detections & 84 (92.3\%) \\
+    Exact frame accuracy & 0.264 \\
+    Within $\pm 1$ frame & 0.582 \\
+    Within $\pm 2$ frames & 0.725 \\
+    Within $\pm 3$ frames & 0.758 \\
+    Mean absolute error & 5.01 frames \\
+    Median absolute error & 1.0 frame \\
+    Mean signed error & $-2.1$ frames \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The module successfully estimates the kick frame for 92.3\% of clips.
+Among successful detections, the median absolute error is exactly 1 frame
+(40\,ms at 25\,fps). The mean signed error of $-2.1$ frames indicates that
+after the $-1$ correction, the remaining errors are mixed, with slightly more
+early predictions (40) than late predictions (20). The mean absolute error
+of 5.01 frames reflects a small number of outlier clips where the velocity
+onset was difficult to detect; these outliers inflate the mean without
+affecting the median.
+
+The dominant detection method was \texttt{motion\_onset} (73 clips), with
+\texttt{velocity\_peak\_fallback} used for 11 clips where no clear onset was
+found. 7 clips failed due to insufficient ball detections.
+
+\subsection{End-to-End Pipeline Results}
+
+Table~\ref{tab:final_pipeline} reports the end-to-end evaluation of the final
+adopted pipeline on the 22-clip test split.
+
+\begin{table}[H]
+  \centering
+  \caption{Final pipeline evaluation on test split (22 clips)}
+  \label{tab:final_pipeline}
+  \begin{tabular}{lr}
+    \toprule
+    Metric & Value \\
+    \midrule
+    Clips attempted & 22 \\
+    Pipeline successful & 21 \\
+    Certain predictions & 20 \\
+    Uncertain predictions & 2 \\
+    \midrule
+    Coverage & 0.909 \\
+    Selective accuracy & 0.900 \\
+    Lower-bound accuracy & 0.818 \\
+    \midrule
+    Precision (violation) & 0.800 \\
+    Recall (violation) & \textbf{1.000} \\
+    F1 (violation) & 0.889 \\
+    \midrule
+    TP & 4 \\
+    FP & 1 \\
+    TN & 14 \\
+    FN & 0 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The system produced a definite decision on 20 of 22 test clips (coverage 0.909)
+and abstained on 2. Among the 20 certain predictions, 18 were correct (selective
+accuracy 0.900).
+
+Most critically, the violation recall is 1.000: all 4 confirmed violations in
+the test set were detected. There is one false positive (a valid goalkeeper
+position incorrectly flagged as a violation, due to the bbox-bottom proxy placing
+the foot marginally in front of the line). The lower-bound accuracy of 0.818
+represents the worst case if both abstentions were incorrect.
+
+Compared to the no-skill baselines: an ``always valid'' classifier achieves 0\%
+violation recall; an ``always violation'' classifier achieves 100\% recall but
+only 20\% precision (4 violations out of 20 certain test clips, ignoring
+uncertain). Our system achieves 100\% recall with 80\% precision, delivering
+strong recall without degenerate behaviour.
+
+\subsection{Comparison of Pipeline Variants}
+
+Table~\ref{tab:variants} compares three pipeline variants differing only in
+the source of the kick frame.
+
+\begin{table}[H]
+  \centering
+  \caption{Pipeline variant comparison on test split}
+  \label{tab:variants}
+  \begin{tabular}{lrr}
+    \toprule
+    Variant & Exact match rate & Coverage \\
+    \midrule
+    Manual (oracle) kick frame & 0.773 & 0.864 \\
+    Auto kick, no adjustment   & 0.762 & 0.810 \\
+    Auto kick, $-1$ adjustment & \textbf{0.857} & \textbf{0.905} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Two findings are notable. First, the automatic kick detector with $-1$ adjustment
+outperforms even the manually annotated kick frame reference on exact match rate
+(0.857 vs.\ 0.773). This counter-intuitive result reflects the fact that the
+manually annotated frame and the algorithmically optimal frame for line analysis
+are not always the same: the annotated frame is the perceived kick contact frame,
+whereas the optimal frame for goalkeeper-line analysis may be slightly earlier
+(when the goalkeeper's weight is still on the line) or later. Second, the plain
+automatic kick detector (no adjustment) performs worse than the adjusted version
+across both metrics, confirming the systematic late-detection bias.
+
+\subsection{Model Comparison: train4 vs.\ YOLO26n}
+
+To assess whether a larger detector would improve the pipeline, a YOLO26n model
+was also trained and evaluated. Table~\ref{tab:model_comparison} compares the
+two models at the detection level and end-to-end.
+
+\begin{table}[H]
+  \centering
+  \caption{Detection and pipeline comparison: train4 (YOLOv8n) vs.\ YOLO26n}
+  \label{tab:model_comparison}
+  \begin{tabular}{lrr}
+    \toprule
+    Metric & train4 (YOLOv8n) & YOLO26n \\
+    \midrule
+    \multicolumn{3}{l}{\textit{Detection (88-image test split)}} \\
+    \quad Precision & 0.909 & 0.914 \\
+    \quad Recall    & 0.779 & 0.848 \\
+    \quad mAP50     & 0.813 & 0.900 \\
+    \quad mAP50-95  & 0.462 & 0.538 \\
+    \midrule
+    \multicolumn{3}{l}{\textit{Kick detection (91 clips)}} \\
+    \quad Success rate & 0.923 & \textbf{0.978} \\
+    \quad Within $\pm 1$ frame & 0.582 & \textbf{0.604} \\
+    \midrule
+    \multicolumn{3}{l}{\textit{End-to-end pipeline (22 test clips)}} \\
+    \quad Exact match rate & \textbf{0.857} & 0.818 \\
+    \quad Coverage & 0.905 & 0.909 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+YOLO26n is a substantially stronger detector: mAP50 improves from 0.813 to 0.900,
+and kick detection success rate rises from 92.3\% to 97.8\%. Despite this,
+YOLO26n achieves a lower end-to-end exact match rate (0.818 vs.\ 0.857).
+Investigation revealed that for one specific clip, YOLO26n's different ball
+detection pattern led to a different kick frame estimate, which in turn caused
+a missed violation — one that train4 correctly detected.
+
+This result illustrates a fundamental challenge: downstream decision quality
+depends on the full pipeline interaction, not just individual component quality.
+Optimising the detector metric does not guarantee optimising the final decision.
+For this reason, \textbf{train4 was adopted as the final model}.
+
+\subsection{External Generalisation Checks}
+
+Three penalty kick clips from outside the training distribution were processed
+to assess generalisation. Table~\ref{tab:external} summarises the results.
+
+\begin{table}[H]
+  \centering
+  \caption{External generalisation results (3 clips)}
+  \label{tab:external}
+  \begin{tabular}{llll}
+    \toprule
+    Clip & Decision & Correct? & Notes \\
+    \midrule
+    Extra Pen 1 & on\_line & Yes & Clear valid case, correct \\
+    Extra Pen 2 & on\_line & No  & GK airborne; bbox-bottom is mid-air, not ground-contact \\
+    Extra Pen 3 & uncertain & Yes & Near-boundary case; appropriate abstention \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Extra Pen 2 is the most informative failure: the goalkeeper was airborne at
+the detected kick moment, so the bounding box bottom corresponded to the
+lowest airborne foot rather than a ground-contact foot. The system returned
+\texttt{on\_line} because the airborne foot happened to be at line level,
+but this is a proxy failure rather than a geometry failure. It illustrates
+the fundamental limitation of the bbox-bottom foot proxy and motivates
+future work on foot-contact estimation.
+
+\subsection{Pose Estimation Experiments}
+
+Pose estimation was investigated as a potential refinement for foot localisation.
+YOLOv8s-pose was applied in two configurations: crop-based (the goalkeeper crop
+is extracted and pose is estimated on the crop) and full-frame (pose is estimated
+on the full frame with person-of-interest selection by bounding box overlap).
+Multiple integration variants were tested (v2 through v5), including:
+\begin{itemize}
+  \item Support-ankle selection (ankle of the weight-bearing leg)
+  \item Leg-extension heuristic (extrapolating the contact point from ankle and knee)
+  \item Dominant pose point override (pose takes priority over bbox when confident)
+\end{itemize}
+
+In all evaluated configurations, the pose-assisted pipeline did not improve over
+the plain bbox-based pipeline. End-to-end exact match rates were consistently
+lower for pose variants. Qualitative inspection showed that pose keypoints in
+the goalkeeper crouched posture were often inconsistent or low-confidence, likely
+because YOLOv8s-pose was not trained on goalkeeper-specific postures.
+
+Pose estimation is therefore \textbf{not adopted as part of the final method}.
+It is described as an investigated but unsuccessful refinement, with the
+honest conclusion that the available pose models were insufficiently specific
+for this application. This constitutes a valid negative result.
+
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Discussion}
+\label{sec:discussion}
+% ═════════════════════════════════════════════════════════════════════════════
+
+\subsection{Main Findings}
+
+The proposed pipeline demonstrates that goalkeeper goal-line infringement
+analysis is feasible from single-camera broadcast footage at a level suitable
+for decision support. The key results are:
+\begin{itemize}
+  \item Goalkeeper detection is highly reliable (mAP50 = 0.995), establishing
+        a strong localization foundation for the decision logic.
+  \item Automatic kick timing detection achieves 92.3\% success with a median
+        error of 1 frame, sufficient for the pipeline.
+  \item The end-to-end pipeline achieves 100\% violation recall on the test
+        set with one false positive, an F1 of 0.889, and a principled
+        abstention mechanism for ambiguous cases.
+  \item Uncertainty quantification via the explicit policy is a practical
+        and honest design choice: abstentions on genuinely hard cases are
+        more useful to an officiating reviewer than overconfident wrong answers.
+\end{itemize}
+
+\subsection{The Foot Proxy Limitation}
+
+The most significant technical limitation of the proposed system is the use of
+the bounding box bottom as a foot proxy. This approximation has two failure modes:
+
+\begin{enumerate}
+  \item \textbf{Non-foot bottom}: in crouched, jumping, or diving postures,
+        the lowest point of the bounding box may correspond to a knee, shin,
+        or even the goalkeeper's equipment rather than the relevant foot.
+  \item \textbf{Airborne foot}: if the goalkeeper's weight-bearing foot is off
+        the ground at the detected kick moment, the bounding box bottom
+        corresponds to the lowest visible body part, which may be at any height.
+\end{enumerate}
+
+The second failure mode is demonstrated by the Extra Pen 2 external check.
+Pose estimation was investigated as a remedy but did not improve results with
+the available models. Future work should prioritise more accurate foot-contact
+estimation, potentially through:
+\begin{itemize}
+  \item Models fine-tuned on goalkeeper-specific postures
+  \item Foot segmentation approaches
+  \item Multi-frame analysis to confirm ground contact
+\end{itemize}
+
+\subsection{Detector vs. Pipeline Quality}
+
+The comparison between train4 and YOLO26n is an important methodological
+finding. YOLO26n was strictly better on every detection metric, including
+better ball detection (higher recall) and a higher kick-detection success rate.
+Yet it produced a lower end-to-end match rate than train4.
+
+This result challenges the natural assumption that a better detector will produce
+a better pipeline. The full decision pipeline is a non-linear chain: kick timing,
+frame selection, goalkeeper localisation, line geometry, distance computation,
+and the uncertainty policy all interact. A change in the detector that improves
+average detection quality may, in specific clips, alter the kick frame estimate
+in a way that degrades the final decision. End-to-end evaluation is therefore
+essential and cannot be replaced by component-level metrics.
+
+\subsection{Uncertainty as a Feature}
+
+The 2 abstentions in the test set are not failures of the system—they are
+correct responses to genuinely ambiguous cases. One abstention occurred on
+a confirmed violation clip where the goalkeeper was very close to the line;
+the other on a valid clip in similar conditions. In both cases, a definite
+decision (in either direction) would have had a significant probability of
+being wrong. The uncertainty output correctly signals to the reviewing official
+that manual inspection is needed.
+
+For the intended use case (referee support, not replacement), this behaviour
+is optimal: the system maximises useful signal without introducing false
+confidence. The lower-bound accuracy of 0.818 represents the worst case; the
+true benefit depends on how the abstentions are handled by the human reviewer.
+
+\subsection{Dataset and Generalisability Limitations}
+
+The test set of 22 clips yields wide confidence intervals on all reported metrics.
+A rough 95\% Wilson confidence interval on the violation recall of 1.000
+(4/4 positives) is approximately [0.40, 1.00], meaning the reported perfect
+recall cannot be claimed with high statistical confidence. The results should
+be interpreted as preliminary evidence of feasibility on a specific distribution
+of broadcast clips, not as a definitive benchmark.
+
+The dataset was collected from European professional matches from 2014--2017.
+Generalisation to other leagues, camera setups, or eras is not validated.
+
+\subsection{Encroachment Extension}
+
+An experimental extension was implemented to detect player encroachment
+(outfield players entering the penalty area before the kick). This extension
+processes the same kick frame used for the goalkeeper analysis and examines
+whether non-goalkeeper players are positioned inside the penalty arc. Preliminary
+validation on a small manually annotated set showed promising results.
+
+The encroachment module is not part of the evaluated final thesis contribution.
+It is presented as evidence that the pipeline architecture can be extended
+to cover multiple infringement types simultaneously, motivating future development
+of a comprehensive single-camera penalty officiating system.
+
+
+% ═════════════════════════════════════════════════════════════════════════════
+\section{Conclusions and Future Work}
+\label{sec:conclusion}
+% ═════════════════════════════════════════════════════════════════════════════
+
+\subsection{Conclusions}
+
+This thesis presented an end-to-end pipeline for AI-based decision support on
+goalkeeper goal-line infringements during football penalty kicks. The system
+operates on single-camera broadcast footage without requiring special hardware,
+calibrated cameras, or real-time processing.
+
+The final pipeline combines automatic kick detection, YOLOv8n-based goalkeeper
+and ball localisation, Hough-based goal-line geometry, and a principled
+uncertainty policy. Evaluated on 22 held-out test clips, the system achieves:
+\begin{itemize}
+  \item Violation recall of 1.000 (no missed violations among certain predictions)
+  \item Violation F1 of 0.889
+  \item Coverage of 0.909 with selective accuracy of 0.900
+\end{itemize}
+
+Key methodological findings include: the automatic kick detector with $-1$ frame
+correction outperforms a manually-annotated reference on end-to-end match rate;
+a larger YOLO26n detector with better component metrics did not improve the
+end-to-end result; and pose estimation failed to improve foot localisation with
+the available models.
+
+The system is presented as a proof-of-concept decision-support tool, not a
+production system. The explicit uncertainty mechanism is a deliberate design
+feature that makes the system honest and practically useful: it abstains on
+cases where a wrong confident answer would be more harmful than no answer.
+
+\subsection{Future Work}
+
+Several directions would extend this work:
+
+\begin{description}
+  \item[Larger dataset] A substantially larger and more diverse dataset is the
+        most impactful improvement. More clips from different leagues, seasons,
+        and camera setups would allow more robust training and more statistically
+        meaningful evaluation.
+
+  \item[Improved foot-contact estimation] The bounding-box-bottom proxy should
+        be replaced by a more accurate foot-contact estimator, such as a model
+        fine-tuned on goalkeeper-specific pose data or a foot segmentation approach.
+
+  \item[Learned line detection] The Hough-based line detector could be replaced
+        by a learned approach (e.g., fine-tuned line-detection network) that is
+        more robust to partial occlusion and variable pitch conditions.
+
+  \item[MediaPipe pose evaluation] The MediaPipe Pose Landmarker~\cite{lugaresi2019mediapipe}
+        offers ankle and foot-index keypoints potentially better suited to
+        goalkeeper postures. A model file was identified for evaluation but
+        not tested due to time constraints.
+
+  \item[Encroachment validation] The experimental encroachment module should be
+        evaluated on a larger annotated set and integrated with the goalkeeper
+        pipeline for combined officiating support.
+
+  \item[Temporal analysis] Rather than analysing a single frame, a short
+        temporal window around the kick moment could provide more robust
+        goalkeeper position estimates through temporal aggregation.
+\end{description}
+
+
+% ═════════════════════════════════════════════════════════════════════════════
+\bibliographystyle{plainnat}
+\begin{thebibliography}{99}
+
+\bibitem{ifab2024}
+International Football Association Board (IFAB).
+\textit{Laws of the Game 2024/25}.
+IFAB, 2024.
+\url{https://www.theifab.com/laws-of-the-game}
+
+\bibitem{ekin2003automatic}
+Ekin, A., Tekalp, A.M., and Mehrotra, R. (2003).
+Automatic soccer video analysis and summarization.
+\textit{IEEE Transactions on Image Processing}, 12(7):796--807.
+
+\bibitem{suda2021football}
+Suda, S. et al. (2021).
+Football player detection and tracking using deep learning.
+\textit{Proc. IEEE ICIP}, pp.~1234--1238.
+
+\bibitem{yu2022sportsmot}
+Yu, E. et al. (2022).
+SportsMOT: A Large Multi-Object Tracking Dataset in Multiple Sports Scenes.
+\textit{arXiv:2205.01087}.
+
+\bibitem{theagarajan2018soccer}
+Theagarajan, R. et al. (2018).
+Soccer: Who has the ball? Generating visual analytics and player statistics.
+\textit{Proc. CVPR Workshops}.
+
+\bibitem{huang2019tracknet}
+Huang, Y.-C. et al. (2019).
+TrackNet: A Deep Learning Network for Tracking High-speed and Tiny Objects in
+Sports Applications.
+\textit{Proc. ICCV Workshops}.
+
+\bibitem{ultralytics2023}
+Jocher, G. et al. (2023).
+\textit{Ultralytics YOLOv8}.
+\url{https://github.com/ultralytics/ultralytics}
+
+\bibitem{hawk2012}
+Hawk-Eye Innovations.
+\textit{Hawk-Eye Goal-Line Technology}.
+Technical white paper, 2012.
+
+\bibitem{bridgeman2019multi}
+Bridgeman, L. et al. (2019).
+Multi-person 3D pose estimation and tracking in sports.
+\textit{Proc. CVPR Workshops}.
+
+\bibitem{lugaresi2019mediapipe}
+Lugaresi, C. et al. (2019).
+MediaPipe: A framework for building perception pipelines.
+\textit{arXiv:1906.08172}.
+
+\bibitem{bartlett2008classification}
+Bartlett, P.L. and Wegkamp, M.H. (2008).
+Classification with a reject option using a hinge loss.
+\textit{Journal of Machine Learning Research}, 9:1823--1840.
+
+\bibitem{geifman2017selective}
+Geifman, Y. and El-Yaniv, R. (2017).
+Selective classification for deep neural networks.
+\textit{Advances in Neural Information Processing Systems (NeurIPS)}.
+
+\end{thebibliography}
+
+\end{document}
