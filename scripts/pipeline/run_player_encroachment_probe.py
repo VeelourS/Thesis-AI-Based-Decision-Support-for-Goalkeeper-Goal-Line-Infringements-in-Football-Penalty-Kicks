@@ -340,30 +340,72 @@ def is_probably_on_pitch(
     }
 
 
+def _penalty_spot_from_trajectory(kick_details: Optional[Dict[str, object]]) -> Optional[Tuple[float, float]]:
+    """Return the ball position from the earliest trajectory entry (ball at rest on penalty spot).
+
+    When the ball is in flight at the analyzed frame its current bbox position is far
+    from the penalty spot, causing wrong kicker identification.  The trajectory recorded
+    during auto-kick detection starts before the ball moves, so the first few entries give
+    a reliable penalty-spot estimate.
+    """
+    if kick_details is None:
+        return None
+    traj = kick_details.get("ball_trajectory")
+    if not traj:
+        return None
+    # Take median of first 3 entries to smooth any outliers
+    early = traj[:3]
+    xs = [float(entry[1]) for entry in early]
+    ys = [float(entry[2]) for entry in early]
+    return (float(np.median(xs)), float(np.median(ys)))
+
+
 def pick_kicker_idx(
     person_boxes: List[Dict[str, object]],
     ball_box: Optional[Dict[str, float]],
     goalkeeper_idx: Optional[int],
     gk_box: Optional[Dict[str, float]] = None,
+    kick_details: Optional[Dict[str, object]] = None,
 ) -> Optional[int]:
     scored: List[Tuple[float, int]] = []
     if ball_box is not None:
-        ball_center = box_center(ball_box)
+        # Prefer early-trajectory position (ball at penalty spot) over current ball bbox.
+        # At the kick frame the ball is already in flight; its current position is far from
+        # the penalty spot and causes the kicker to be confused with a nearby encroacher.
+        penalty_spot = _penalty_spot_from_trajectory(kick_details)
+        ball_center = penalty_spot if penalty_spot is not None else box_center(ball_box)
         candidate_pool = [
             (idx, person) for idx, person in enumerate(person_boxes)
             if idx != goalkeeper_idx and person.get("on_pitch", True)
         ]
         likely_pool = [(idx, person) for idx, person in candidate_pool if person.get("likely_player", False)]
         active_pool = likely_pool if likely_pool else candidate_pool
-        for idx, person in active_pool:
 
+        # When we have a reliable penalty-spot estimate, apply a hard distance filter:
+        # the kicker must be within 250px of the spot (handles zoomed-out broadcast views).
+        # Tiny bounding boxes (height < 50px) are unlikely to be the kicker — they're
+        # distant players or partial detections.
+        if penalty_spot is not None:
+            close_pool = [
+                (idx, person) for idx, person in active_pool
+                if distance_point_to_box(penalty_spot, person) <= 250.0
+                and float(person["y2"] - person["y1"]) >= 50.0
+            ]
+            if close_pool:
+                active_pool = close_pool
+
+        for idx, person in active_pool:
             dist = distance_point_to_box(ball_center, person)
             motion = float(person.get("motion_score", 0.0))
             height = float(person["y2"] - person["y1"])
             likely_bonus = 18.0 if person.get("likely_player", False) else 0.0
 
-            # Prefer people near the ball who are moving at the kick moment.
-            score = motion * 1.5 - dist * 0.24 + min(height, 220.0) * 0.02 + likely_bonus
+            # With penalty-spot anchor: strongly penalise distance; motion is secondary.
+            # Without penalty-spot anchor: original motion-first scoring.
+            if penalty_spot is not None:
+                score = motion * 0.8 - dist * 0.55 + min(height, 220.0) * 0.03 + likely_bonus
+            else:
+                score = motion * 1.5 - dist * 0.24 + min(height, 220.0) * 0.02 + likely_bonus
             scored.append((score, idx))
     else:
         if gk_box is None:
@@ -791,7 +833,7 @@ def analyze_frame(
             person_boxes[idx]["likely_player"] = False
             person_boxes[idx]["display"] = False
 
-    kicker_idx = pick_kicker_idx(person_boxes, ball_box, goalkeeper_idx, gk_box=gk_box)
+    kicker_idx = pick_kicker_idx(person_boxes, ball_box, goalkeeper_idx, gk_box=gk_box, kick_details=kick_details)
     if kicker_idx is not None:
         person_boxes[kicker_idx]["on_pitch"] = True
         person_boxes[kicker_idx]["likely_player"] = True
@@ -911,7 +953,7 @@ def main():
     parser.add_argument("--kick-window-start-s", type=float, default=0.5)
     parser.add_argument("--kick-window-end-s", type=float, default=2.5)
     parser.add_argument("--kick-frame-adjust", type=int, default=-1)
-    parser.add_argument("--temporal-search-radius", type=int, default=2)
+    parser.add_argument("--temporal-search-radius", type=int, default=4)
     parser.add_argument("--player-conf", type=float, default=0.15)
     parser.add_argument("--player-imgsz", type=int, default=1280)
     parser.add_argument("--out-root", default="runs/encroachment")
@@ -962,6 +1004,14 @@ def main():
         "no_penalty_area_line",
         "no_kicker",
     }
+    # Also trigger temporal search when no_encroachment but few players were visible in the
+    # penalty-area zone — this catches cases where the chosen frame is slightly too early
+    # (e.g. Genoa-Juventus: frame 36 shows an empty penalty arc area, frame 40 shows players).
+    _no_enc_sparse = (
+        payload.get("decision") == "no_encroachment"
+        and int(payload.get("line_zone_player_count") or 0) == 0
+        and payload.get("penalty_area_front_line") is not None
+    )
     temporal_candidates: List[Dict[str, object]] = []
     if (
         int(args.temporal_search_radius) > 0
@@ -975,6 +1025,7 @@ def main():
                 and int(payload.get("encroachment_candidate_count") or 0) <= 2
                 and int(payload.get("line_zone_player_count") or 0) <= 3
             )
+            or _no_enc_sparse
         )
     ):
         best_payload = payload
