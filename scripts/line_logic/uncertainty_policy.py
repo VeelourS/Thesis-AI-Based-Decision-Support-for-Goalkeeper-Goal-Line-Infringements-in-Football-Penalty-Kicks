@@ -15,13 +15,20 @@ def apply_uncertainty_policy(
     comments: str = "",
 ) -> Dict[str, Any]:
     """
-    Convert borderline or weak-geometry decisions into an explicit `uncertain`.
+    Preserve explicit `uncertain` hard-failures without overriding stable
+    geometric decisions post hoc.
 
-    The policy is intentionally conservative:
-    - keep hard failures (`no_goalkeeper`, `no_line`) as `uncertain`
-    - abstain near the decision boundary
-    - abstain more readily when near-boundary geometry is combined with
-      high local y-error or partial ankle visibility
+    Earlier versions of this policy converted many `on_line` / `off_line`
+    decisions into `uncertain` based on broad heuristics such as bbox proxy
+    spread or near-boundary geometry. That proved too conservative on the
+    expanded benchmark and substantially reduced practical accuracy.
+
+    The current policy keeps uncertainty only for:
+    - decisions that were already uncertain upstream
+    - results missing required geometry values
+
+    All other decisions are passed through unchanged, while still recording
+    diagnostic flags for analysis.
     """
 
     out = dict(result)
@@ -95,22 +102,6 @@ def apply_uncertainty_policy(
 
     policy_decision = raw_decision
     policy_reason = raw_reason or ""
-
-    if raw_decision == "on_line" and bbox_corner_proxy and high_proxy_spread:
-        policy_decision = "uncertain"
-        policy_reason = "bbox_proxy_spread"
-    elif near_boundary and high_local_y:
-        policy_decision = "uncertain"
-        policy_reason = "boundary_plus_local_y"
-    elif near_boundary and ankle_occlusion:
-        policy_decision = "uncertain"
-        policy_reason = "boundary_plus_ankle_occlusion"
-    elif near_boundary and comment_occlusion:
-        policy_decision = "uncertain"
-        policy_reason = "boundary_plus_comment_occlusion"
-    elif near_boundary:
-        policy_decision = "uncertain"
-        policy_reason = "boundary_margin"
 
     out["policy_decision"] = policy_decision
     out["policy_reason"] = policy_reason

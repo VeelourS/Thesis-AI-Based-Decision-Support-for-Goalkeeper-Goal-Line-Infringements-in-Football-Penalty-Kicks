@@ -106,9 +106,13 @@ def main():
             )
 
         if args.use_auto_kick:
+            fps = float(row.fps)
+            frame_idx = int(round(float(args.kick_time_in_window_s) * fps))
             cmd.extend(
                 [
                     "--auto-kick",
+                    "--frame-idx",
+                    str(frame_idx),
                     "--kick-window-start-s",
                     "0.5",
                     "--kick-window-end-s",

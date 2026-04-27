@@ -1,12 +1,14 @@
 from pathlib import Path
 import csv
+import os
 import cv2
 
-CLIPS_DIR = Path("data/clips/penalties_720p")
-OUT_CSV = Path("data/meta/kick_times.csv")
+CLIPS_DIR = Path(os.getenv("CLIPS_DIR", "data/clips/penalties_720p"))
+OUT_CSV = Path(os.getenv("OUT_CSV", "data/meta/kick_times.csv"))
+CLIP_GLOB = os.getenv("CLIP_GLOB", "*.mp4")
 
 def list_clips():
-    return sorted(CLIPS_DIR.glob("*.mp4"))
+    return sorted(CLIPS_DIR.glob(CLIP_GLOB))
 
 def load_done():
     done = {}
@@ -29,9 +31,12 @@ def append_row(row):
 def main():
     clips = list_clips()
     if not clips:
-        raise SystemExit("No clips found in data/clips/penalties")
+        raise SystemExit(f"No clips found in {CLIPS_DIR} matching {CLIP_GLOB}")
 
     done = load_done()
+    print(f"Clips dir: {CLIPS_DIR}")
+    print(f"Clip filter: {CLIP_GLOB}")
+    print(f"Output CSV: {OUT_CSV}")
     print(f"Clips found: {len(clips)} | Already labeled: {len(done)}")
     print("Controls: [space]=pause/play  a/d=step -/+1 frame  s/w=step -/+10 frames")
     print("          k=mark kick frame   n=skip clip          q=quit")

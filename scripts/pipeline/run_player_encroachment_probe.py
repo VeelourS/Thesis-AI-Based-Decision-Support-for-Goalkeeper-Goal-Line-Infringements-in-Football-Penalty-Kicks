@@ -1,4 +1,4 @@
-import argparse
+﻿import argparse
 import json
 from pathlib import Path
 import sys
@@ -109,6 +109,21 @@ def iou(a: Dict[str, float], b: Dict[str, float]) -> float:
     return inter / union
 
 
+def deduplicate_person_boxes(
+    boxes: List[Dict[str, float]],
+    iou_thresh: float = 0.6,
+) -> List[Dict[str, float]]:
+    if not boxes:
+        return []
+    ordered = sorted(boxes, key=lambda b: float(b.get("conf", 0.0)), reverse=True)
+    kept: List[Dict[str, float]] = []
+    for box in ordered:
+        if any(iou(box, existing) >= iou_thresh for existing in kept):
+            continue
+        kept.append(box)
+    return kept
+
+
 def signed_line_value(point: Tuple[float, float], line: Tuple[int, int, int, int]) -> float:
     px, py = point
     x1, y1, x2, y2 = line
@@ -192,6 +207,260 @@ def mean(values: List[float]) -> float:
     if not values:
         return 0.0
     return float(sum(values) / len(values))
+
+
+def fit_player_alignment_line(
+    *,
+    gk_center: Tuple[float, float],
+    anchor_center: Tuple[float, float],
+    person_boxes: List[Dict[str, object]],
+    goalkeeper_idx: Optional[int],
+    kicker_idx: Optional[int],
+    pitch_mask: np.ndarray,
+    whiteline_mask: np.ndarray,
+) -> Optional[Tuple[int, int, int, int]]:
+    field_direction = 1.0 if anchor_center[0] >= gk_center[0] else -1.0
+    x_lo = min(gk_center[0], anchor_center[0]) - 320.0
+    x_hi = max(gk_center[0], anchor_center[0]) + 320.0
+    y_lo = min(gk_center[1], anchor_center[1]) - 60.0
+    y_hi = max(gk_center[1], anchor_center[1]) + 280.0
+
+    points: List[Tuple[float, float]] = []
+    for idx, person in enumerate(person_boxes):
+        if idx in {goalkeeper_idx, kicker_idx}:
+            continue
+        if not person.get("on_pitch", False):
+            continue
+        if not person.get("likely_player", False):
+            continue
+        pt = bottom_points(person)["center_bottom"]
+        if not (x_lo <= pt[0] <= x_hi and y_lo <= pt[1] <= y_hi):
+            continue
+        progress = (pt[0] - gk_center[0]) * field_direction
+        if progress < 20.0:
+            continue
+        ball_foot_distance = float(person.get("ball_foot_distance") or 1e9)
+        ball_box_distance = float(person.get("ball_box_distance") or 1e9)
+        near_anchor_zone = (
+            abs(pt[0] - anchor_center[0]) <= 380.0
+            and abs(pt[1] - anchor_center[1]) <= 260.0
+        )
+        near_ball_zone = ball_foot_distance <= 340.0 or ball_box_distance <= 200.0
+        if not (near_anchor_zone or near_ball_zone):
+            continue
+        points.append((float(pt[0]), float(pt[1])))
+
+    if len(points) < 2:
+        return None
+
+    if len(points) == 2:
+        (px1, py1), (px2, py2) = points
+        if abs(px2 - px1) < 1e-6:
+            return None
+        slope = float((py2 - py1) / (px2 - px1))
+        x0 = float((px1 + px2) / 2.0)
+        y0 = float((py1 + py2) / 2.0)
+        angle = abs(float(np.degrees(np.arctan2(py2 - py1, px2 - px1))))
+    else:
+        pts = np.array(points, dtype=np.float32).reshape(-1, 1, 2)
+        try:
+            vx, vy, x0, y0 = cv2.fitLine(pts, cv2.DIST_L2, 0, 0.01, 0.01).reshape(-1)
+        except cv2.error:
+            return None
+        if abs(vx) < 1e-6:
+            return None
+        slope = float(vy / vx)
+        angle = abs(float(np.degrees(np.arctan2(vy, vx))))
+
+    if angle > 32.0 and angle < 148.0:
+        return None
+
+    residuals = [abs(py - (y0 + slope * (px - x0))) for px, py in points]
+    if mean(residuals) > 70.0:
+        return None
+
+    xs = [pt[0] for pt in points]
+    line_x1 = max(0.0, min(xs) - 70.0)
+    line_x2 = max(line_x1 + 40.0, min(float(pitch_mask.shape[1] - 1), max(xs) + 70.0))
+    line_y1 = y0 + slope * (line_x1 - x0)
+    line_y2 = y0 + slope * (line_x2 - x0)
+
+    h, w = pitch_mask.shape[:2]
+    line = (
+        clamp_int(line_x1, 0, w - 1),
+        clamp_int(line_y1, 0, h - 1),
+        clamp_int(line_x2, 0, w - 1),
+        clamp_int(line_y2, 0, h - 1),
+    )
+
+    gk_dist = point_line_distance(gk_center, line)
+    anchor_dist = point_line_distance(anchor_center, line)
+    if gk_dist < 30.0 or gk_dist > 620.0:
+        return None
+    if anchor_dist < 5.0 or anchor_dist > 380.0:
+        return None
+
+    return line
+
+
+def find_relaxed_penalty_line_candidate(
+    *,
+    all_lines: List[Tuple[int, int, int, int]],
+    gk_center: Tuple[float, float],
+    anchor_center: Tuple[float, float],
+    active_player_bottoms: List[Tuple[float, float]],
+    kicker_bottom: Optional[Tuple[float, float]],
+    pitch_mask: np.ndarray,
+    whiteline_mask: np.ndarray,
+) -> Optional[Tuple[int, int, int, int]]:
+    if not all_lines:
+        return None
+
+    h, w = pitch_mask.shape[:2]
+    field_direction = 1.0 if anchor_center[0] >= gk_center[0] else -1.0
+    field_span_x = max(40.0, abs(anchor_center[0] - gk_center[0]))
+    relaxed_candidates: List[Tuple[float, Tuple[int, int, int, int]]] = []
+
+    for line in all_lines:
+        x1, y1, x2, y2 = line
+        length = float(np.hypot(x2 - x1, y2 - y1))
+        if length < 70.0:
+            continue
+
+        angle = abs(float(np.degrees(np.arctan2(y2 - y1, x2 - x1))))
+        if angle > 55.0 and angle < 125.0:
+            continue
+
+        xmid = (x1 + x2) / 2.0
+        ymid = (y1 + y2) / 2.0
+        if not (w * 0.05 <= xmid <= w * 0.98):
+            continue
+        if not (h * 0.22 <= ymid <= h * 0.94):
+            continue
+
+        x_progress = (xmid - gk_center[0]) * field_direction
+        if x_progress <= -30.0:
+            continue
+        if x_progress > field_span_x + 420.0:
+            continue
+
+        gk_side = signed_line_value(gk_center, line)
+        anchor_side = signed_line_value(anchor_center, line)
+        if gk_side == 0 or anchor_side == 0:
+            continue
+        if gk_side * anchor_side <= 0:
+            continue
+
+        gk_dist = point_line_distance(gk_center, line)
+        anchor_dist = point_line_distance(anchor_center, line)
+        if gk_dist < 25.0 or gk_dist > 700.0:
+            continue
+        if anchor_dist < 0.0 or anchor_dist > 460.0:
+            continue
+
+        support = line_support_stats(line, pitch_mask, whiteline_mask)
+        if support["white_avg"] < 0.006:
+            continue
+        if support["pitch_avg"] < 0.12:
+            continue
+        if min(support["pitch_pos_avg"], support["pitch_neg_avg"]) < 0.015:
+            continue
+
+        player_hits = 0
+        player_distances: List[float] = []
+        for px, py in active_player_bottoms:
+            if px < min(x1, x2) - 120 or px > max(x1, x2) + 120:
+                continue
+            ly = line_y_at_x(line, px)
+            if ly is None:
+                continue
+            vertical_gap = abs(py - ly)
+            player_distances.append(vertical_gap)
+            if vertical_gap <= 155.0:
+                player_hits += 1
+
+        kicker_gap = 999.0
+        if kicker_bottom is not None:
+            ly = line_y_at_x(line, kicker_bottom[0])
+            if ly is not None:
+                kicker_gap = abs(kicker_bottom[1] - ly)
+
+        if player_hits == 0 and not player_distances and kicker_gap > 230.0:
+            continue
+        if player_hits == 0 and player_distances and mean(player_distances) > 220.0 and kicker_gap > 210.0:
+            continue
+
+        score = length
+        score += max(0.0, 280.0 - abs(gk_dist - 170.0)) * 0.55
+        score += max(0.0, 220.0 - abs(anchor_dist - 80.0)) * 0.45
+        score += support["white_avg"] * 180.0
+        score += min(support["pitch_pos_avg"], support["pitch_neg_avg"]) * 140.0
+        score += min(player_hits, 4) * 55.0
+        if player_distances:
+            score += max(0.0, 170.0 - mean(player_distances)) * 1.0
+        if kicker_gap < 999.0:
+            score += max(0.0, 220.0 - kicker_gap) * 0.20
+        relaxed_candidates.append((score, line))
+
+    if not relaxed_candidates:
+        return None
+    relaxed_candidates.sort(key=lambda item: item[0], reverse=True)
+    return relaxed_candidates[0][1]
+
+
+def infer_goalkeeper_from_people(
+    *,
+    image_shape: Tuple[int, int],
+    person_boxes: List[Dict[str, object]],
+    ball_box: Optional[Dict[str, float]],
+) -> Tuple[Optional[int], Optional[Dict[str, float]]]:
+    h, w = image_shape[:2]
+    if not person_boxes:
+        return None, None
+
+    active = [(idx, person) for idx, person in enumerate(person_boxes) if person.get("on_pitch", False)]
+    if not active:
+        return None, None
+
+    centers = [(idx, box_center(person)) for idx, person in active]
+    ys = [cy for _, (_, cy) in centers]
+    median_y = float(np.median(ys)) if ys else (h / 2.0)
+
+    ball_center = box_center(ball_box) if ball_box is not None else None
+    scored: List[Tuple[float, int]] = []
+    for idx, person in active:
+        cx, cy = box_center(person)
+        height = float(person["y2"] - person["y1"])
+        width = float(person["x2"] - person["x1"])
+        if height < 45.0 or width < 18.0:
+            continue
+        edge_proximity = max(cx, w - cx)
+        score = edge_proximity * 0.35
+        score -= abs(cy - median_y) * 0.12
+        score -= max(0.0, cy - median_y) * 0.18
+        score += min(height, 220.0) * 0.08
+        if ball_center is not None:
+            bx, by = ball_center
+            score += min(abs(cx - bx), 900.0) * 0.06
+            score -= max(0.0, cy - by) * 0.10
+            if cy <= by + 80.0:
+                score += 28.0
+        scored.append((score, idx))
+
+    if not scored:
+        return None, None
+    scored.sort(reverse=True)
+    best_idx = scored[0][1]
+    person = person_boxes[best_idx]
+    gk_box = {
+        "cls": 0,
+        "conf": float(person.get("conf", 0.0)),
+        "x1": float(person["x1"]),
+        "y1": float(person["y1"]),
+        "x2": float(person["x2"]),
+        "y2": float(person["y2"]),
+    }
+    return best_idx, gk_box
 
 
 def compute_motion_map(curr_bgr: np.ndarray, prev_bgr: Optional[np.ndarray]) -> np.ndarray:
@@ -374,6 +643,7 @@ def pick_kicker_idx(
         # the penalty spot and causes the kicker to be confused with a nearby encroacher.
         penalty_spot = _penalty_spot_from_trajectory(kick_details)
         ball_center = penalty_spot if penalty_spot is not None else box_center(ball_box)
+        ball_x, ball_y = ball_center
         candidate_pool = [
             (idx, person) for idx, person in enumerate(person_boxes)
             if idx != goalkeeper_idx and person.get("on_pitch", True)
@@ -383,7 +653,7 @@ def pick_kicker_idx(
 
         # When we have a reliable penalty-spot estimate, apply a hard distance filter:
         # the kicker must be within 250px of the spot (handles zoomed-out broadcast views).
-        # Tiny bounding boxes (height < 50px) are unlikely to be the kicker — they're
+        # Tiny bounding boxes (height < 50px) are unlikely to be the kicker - they're
         # distant players or partial detections.
         if penalty_spot is not None:
             close_pool = [
@@ -395,17 +665,43 @@ def pick_kicker_idx(
                 active_pool = close_pool
 
         for idx, person in active_pool:
-            dist = distance_point_to_box(ball_center, person)
+            cx, cy = box_center(person)
+            points = bottom_points(person)
+            center_bottom = points["center_bottom"]
+            foot_dist = float(np.hypot(center_bottom[0] - ball_x, center_bottom[1] - ball_y))
+            box_dist = distance_point_to_box(ball_center, person)
+            horiz_gap = abs(cx - ball_x)
+            vertical_to_feet = abs(center_bottom[1] - ball_y)
             motion = float(person.get("motion_score", 0.0))
             height = float(person["y2"] - person["y1"])
             likely_bonus = 18.0 if person.get("likely_player", False) else 0.0
+            ball_within_body_x = person["x1"] - 8.0 <= ball_x <= person["x2"] + 8.0
+            ball_near_feet = person["y1"] + height * 0.45 <= ball_y <= person["y2"] + 22.0
 
-            # With penalty-spot anchor: strongly penalise distance; motion is secondary.
-            # Without penalty-spot anchor: original motion-first scoring.
+            if foot_dist > max(135.0, height * 1.05) and box_dist > 35.0:
+                continue
+
+            # Prefer the player whose lower body is actually closest to the ball,
+            # but trust the trajectory-derived penalty spot more strongly when available.
             if penalty_spot is not None:
-                score = motion * 0.8 - dist * 0.55 + min(height, 220.0) * 0.03 + likely_bonus
+                score = motion * 0.90
+                score -= foot_dist * 0.48
+                score -= box_dist * 0.16
+                score -= horiz_gap * 0.10
+                score -= vertical_to_feet * 0.08
+                score += min(height, 220.0) * 0.03
             else:
-                score = motion * 1.5 - dist * 0.24 + min(height, 220.0) * 0.02 + likely_bonus
+                score = motion * 1.35
+                score -= foot_dist * 0.42
+                score -= box_dist * 0.12
+                score -= horiz_gap * 0.08
+                score -= vertical_to_feet * 0.06
+                score += min(height, 220.0) * 0.02
+            score += likely_bonus
+            if ball_within_body_x:
+                score += 22.0
+            if ball_near_feet:
+                score += 28.0
             scored.append((score, idx))
     else:
         if gk_box is None:
@@ -468,6 +764,7 @@ def detect_penalty_area_front_line(
     gk_box: Optional[Dict[str, float]],
     ball_box: Optional[Dict[str, float]],
     person_boxes: List[Dict[str, object]],
+    goalkeeper_idx: Optional[int],
     kicker_idx: Optional[int],
     pitch_mask: np.ndarray,
     whiteline_mask: np.ndarray,
@@ -485,6 +782,21 @@ def detect_penalty_area_front_line(
         minLineLength=90,
         maxLineGap=18,
     )
+    if lines is None:
+        # Some broadcast clips have a visible front-box line but weak white-line
+        # segmentation; fall back to broader grayscale edges on-pitch only.
+        gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
+        broad_edges = cv2.Canny(gray, 70, 180)
+        broad_edges = cv2.bitwise_and(broad_edges, pitch_mask)
+        broad_edges = cv2.morphologyEx(broad_edges, cv2.MORPH_CLOSE, kernel, iterations=1)
+        lines = cv2.HoughLinesP(
+            broad_edges,
+            rho=1,
+            theta=np.pi / 180,
+            threshold=28,
+            minLineLength=70,
+            maxLineGap=26,
+        )
     if lines is None or gk_box is None:
         return None, []
 
@@ -524,19 +836,19 @@ def detect_penalty_area_front_line(
             continue
 
         angle = abs(float(np.degrees(np.arctan2(y2 - y1, x2 - x1))))
-        if angle > 35 and angle < 145:
+        if angle > 42 and angle < 138:
             continue
 
         xmid = (x1 + x2) / 2.0
         ymid = (y1 + y2) / 2.0
-        if not (w * 0.18 <= xmid <= w * 0.92):
+        if not (w * 0.12 <= xmid <= w * 0.95):
             continue
-        if not (h * 0.38 <= ymid <= h * 0.88):
+        if not (h * 0.32 <= ymid <= h * 0.90):
             continue
         x_progress = (xmid - gk_center[0]) * field_direction
-        if x_progress <= 10.0:
+        if x_progress <= -10.0:
             continue
-        if x_progress > field_span_x + 220.0:
+        if x_progress > field_span_x + 280.0:
             continue
 
         gk_side = signed_line_value(gk_center, line)
@@ -550,15 +862,15 @@ def detect_penalty_area_front_line(
         anchor_dist = point_line_distance(anchor_center, line)
         if gk_dist < 40 or gk_dist > 450:
             continue
-        if anchor_dist < 10 or anchor_dist > 320:
+        if anchor_dist < 5 or anchor_dist > 360:
             continue
 
         support = line_support_stats(line, pitch_mask, whiteline_mask)
-        if support["white_avg"] < 0.03:
+        if support["white_avg"] < 0.018:
             continue
-        if support["pitch_avg"] < 0.35:
+        if support["pitch_avg"] < 0.26:
             continue
-        if min(support["pitch_pos_avg"], support["pitch_neg_avg"]) < 0.18:
+        if min(support["pitch_pos_avg"], support["pitch_neg_avg"]) < 0.10:
             continue
 
         player_hits = 0
@@ -582,7 +894,7 @@ def detect_penalty_area_front_line(
 
         if player_hits == 0 and not player_distances:
             continue
-        if player_hits == 0 and mean(player_distances) > 135.0:
+        if player_hits == 0 and mean(player_distances) > 165.0:
             continue
 
         score = length
@@ -599,6 +911,29 @@ def detect_penalty_area_front_line(
         candidates.append((score, line))
 
     if not candidates:
+        relaxed_line = find_relaxed_penalty_line_candidate(
+            all_lines=all_lines,
+            gk_center=gk_center,
+            anchor_center=anchor_center,
+            active_player_bottoms=active_player_bottoms,
+            kicker_bottom=kicker_bottom,
+            pitch_mask=pitch_mask,
+            whiteline_mask=whiteline_mask,
+        )
+        if relaxed_line is not None:
+            return relaxed_line, all_lines
+
+        fallback_line = fit_player_alignment_line(
+            gk_center=gk_center,
+            anchor_center=anchor_center,
+            person_boxes=person_boxes,
+            goalkeeper_idx=goalkeeper_idx,
+            kicker_idx=kicker_idx,
+            pitch_mask=pitch_mask,
+            whiteline_mask=whiteline_mask,
+        )
+        if fallback_line is not None:
+            return fallback_line, all_lines
         return None, all_lines
     candidates.sort(key=lambda item: item[0], reverse=True)
     return candidates[0][1], all_lines
@@ -711,12 +1046,12 @@ def classify_encroachment_result(
 ) -> Tuple[str, str]:
     if gk_box is None:
         return "uncertain", "no_goalkeeper"
-    if kicker_idx is None:
-        return "uncertain", "no_kicker"
     if penalty_line is None:
         if ball_box is None:
             return "uncertain", "no_ball_and_no_penalty_area_line"
         return "uncertain", "no_penalty_area_line"
+    if kicker_idx is None and ball_box is None:
+        return "uncertain", "no_kicker"
 
     if kick_details is not None:
         conf = float(kick_details.get("confidence") or 0.0)
@@ -792,6 +1127,7 @@ def analyze_frame(
     gk_box = pick_goalkeeper_box(kick_boxes)
     ball_box = pick_ball_box(kick_boxes)
     person_boxes = predict_boxes(player_model, image_bgr, conf=player_conf, classes=[0], imgsz=player_imgsz)
+    person_boxes = deduplicate_person_boxes(person_boxes, iou_thresh=0.62)
 
     goalkeeper_idx = None
     if gk_box is not None:
@@ -808,6 +1144,18 @@ def analyze_frame(
         person["jersey_hsv"] = extract_jersey_hsv(image_bgr, person)
         person["likely_player"] = bool(on_pitch)
         person["display"] = on_pitch
+        if ball_box is not None:
+            ball_center = box_center(ball_box)
+            person["ball_box_distance"] = float(distance_point_to_box(ball_center, person))
+            person["ball_foot_distance"] = float(
+                np.hypot(
+                    bottom_points(person)["center_bottom"][0] - ball_center[0],
+                    bottom_points(person)["center_bottom"][1] - ball_center[1],
+                )
+            )
+        else:
+            person["ball_box_distance"] = None
+            person["ball_foot_distance"] = None
         if idx == goalkeeper_idx:
             person["on_pitch"] = True
             person["likely_player"] = True
@@ -829,11 +1177,37 @@ def analyze_frame(
             other = person_boxes[jdx].get("jersey_hsv")
             if hsv_distance(jersey, other) <= 34.0:
                 color_neighbors += 1
-        if color_neighbors == 0:
+        close_to_ball = (
+            ball_box is not None
+            and (
+                float(person_boxes[idx].get("ball_foot_distance") or 1e9) <= 120.0
+                or float(person_boxes[idx].get("ball_box_distance") or 1e9) <= 28.0
+            )
+        )
+        if color_neighbors == 0 and not close_to_ball:
             person_boxes[idx]["likely_player"] = False
             person_boxes[idx]["display"] = False
 
-    kicker_idx = pick_kicker_idx(person_boxes, ball_box, goalkeeper_idx, gk_box=gk_box, kick_details=kick_details)
+    if gk_box is None:
+        inferred_idx, inferred_gk_box = infer_goalkeeper_from_people(
+            image_shape=image_bgr.shape[:2],
+            person_boxes=person_boxes,
+            ball_box=ball_box,
+        )
+        if inferred_gk_box is not None:
+            goalkeeper_idx = inferred_idx
+            gk_box = inferred_gk_box
+            person_boxes[goalkeeper_idx]["on_pitch"] = True
+            person_boxes[goalkeeper_idx]["likely_player"] = True
+            person_boxes[goalkeeper_idx]["display"] = True
+
+    kicker_idx = pick_kicker_idx(
+        person_boxes,
+        ball_box,
+        goalkeeper_idx,
+        gk_box=gk_box,
+        kick_details=kick_details,
+    )
     if kicker_idx is not None:
         person_boxes[kicker_idx]["on_pitch"] = True
         person_boxes[kicker_idx]["likely_player"] = True
@@ -844,6 +1218,7 @@ def analyze_frame(
         gk_box,
         ball_box,
         person_boxes,
+        goalkeeper_idx,
         kicker_idx,
         pitch_mask,
         whiteline_mask,
@@ -852,7 +1227,7 @@ def analyze_frame(
     encroachment_candidates: List[int] = []
     candidate_debug: List[Dict[str, object]] = []
     line_zone_player_count = 0
-    if penalty_line is not None and gk_box is not None and kicker_idx is not None:
+    if penalty_line is not None and gk_box is not None and (kicker_idx is not None or ball_box is not None):
         gk_center = box_center(gk_box)
         anchor_center = box_center(ball_box) if ball_box is not None else box_center(person_boxes[kicker_idx])
         gk_sign = signed_line_value(gk_center, penalty_line)
@@ -872,7 +1247,11 @@ def analyze_frame(
                 continue
             person_points = bottom_points(person)
             center_bottom = person_points["center_bottom"]
-            values = [signed_line_value(pt, penalty_line) * inside_sign for pt in person_points.values()]
+            point_values = {
+                name: signed_line_value(pt, penalty_line) * inside_sign
+                for name, pt in person_points.items()
+            }
+            values = list(point_values.values())
             seg_dist = point_segment_distance(center_bottom, penalty_line)
             if field_direction > 0:
                 x_ok = (gk_x - 40.0) <= center_bottom[0] <= (line_x_max + 120.0)
@@ -889,15 +1268,26 @@ def analyze_frame(
             near_line = seg_dist <= 125.0
             if x_ok and near_line:
                 line_zone_player_count += 1
-            is_candidate = max(values) > 8.0 and x_ok and near_line
+            center_value = float(point_values["center_bottom"])
+            positive_count = sum(v > 6.0 for v in values)
+            strong_inside = center_value > 12.0 or (center_value > 7.0 and positive_count >= 2)
+            deep_inside = max(values) > 20.0 and positive_count >= 2
+            near_ball = False
+            if ball_box is not None:
+                ball_center = box_center(ball_box)
+                near_ball = float(np.hypot(center_bottom[0] - ball_center[0], center_bottom[1] - ball_center[1])) <= 58.0
+            is_candidate = x_ok and near_line and (strong_inside or deep_inside) and not near_ball
             person["display"] = bool(person.get("display", False) and display_zone)
             candidate_debug.append(
                 {
                     "idx": idx,
                     "inside_values": [float(v) for v in values],
+                    "center_value": center_value,
+                    "positive_count": int(positive_count),
                     "segment_distance_px": seg_dist,
                     "x_ok": x_ok,
                     "near_line": near_line,
+                    "near_ball": near_ball,
                     "display_zone": display_zone,
                     "center_bottom": [float(center_bottom[0]), float(center_bottom[1])],
                 }
@@ -1005,7 +1395,7 @@ def main():
         "no_kicker",
     }
     # Also trigger temporal search when no_encroachment but few players were visible in the
-    # penalty-area zone — this catches cases where the chosen frame is slightly too early
+    # penalty-area zone ??this catches cases where the chosen frame is slightly too early
     # (e.g. Genoa-Juventus: frame 36 shows an empty penalty arc area, frame 40 shows players).
     _no_enc_sparse = (
         payload.get("decision") == "no_encroachment"

@@ -28,7 +28,7 @@ def pick(row, keys):
 
 def resolve_src(row):
     # If you ever have absolute paths in CSV
-    cp = pick(row, ["clip_path", "path", "full_path"])
+    cp = pick(row, ["src_file", "clip_path", "path", "full_path"])
     if cp:
         p = Path(cp)
         return p
