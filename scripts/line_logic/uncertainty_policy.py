@@ -100,8 +100,19 @@ def apply_uncertainty_policy(
     if high_proxy_spread:
         flags.append("high_proxy_spread")
 
+    # Convert to uncertain only for the most unreliable proxy cases:
+    # - bbox corner proxy with high spread between corners (unreliable foot position)
+    # - near boundary AND high local_y_err (both geometry signals unreliable simultaneously)
+    # These are targeted enough to not destroy coverage, but catch the worst proxy failures.
     policy_decision = raw_decision
     policy_reason = raw_reason or ""
+
+    if bbox_corner_proxy and high_proxy_spread:
+        policy_decision = "uncertain"
+        policy_reason = "bbox_corner_proxy_high_spread"
+    elif near_boundary and high_local_y:
+        policy_decision = "uncertain"
+        policy_reason = "near_boundary_high_local_y_err"
 
     out["policy_decision"] = policy_decision
     out["policy_reason"] = policy_reason
