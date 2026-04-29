@@ -107,12 +107,15 @@ def apply_uncertainty_policy(
     policy_decision = raw_decision
     policy_reason = raw_reason or ""
 
-    if bbox_corner_proxy and high_proxy_spread:
+    # Uncertain only when ALL three signals align:
+    # - using a bbox corner (not the centre) as foot proxy
+    # - large spread between bbox corners (>= 17 px) → foot could be anywhere in that range
+    # - decision is near the boundary (within uncertainty_margin_px of the threshold)
+    # Together these mean: the foot proxy is both unreliable AND the measurement is too
+    # close to the decision threshold to trust.  Any one or two of these alone is fine.
+    if bbox_corner_proxy and high_proxy_spread and near_boundary:
         policy_decision = "uncertain"
-        policy_reason = "bbox_corner_proxy_high_spread"
-    elif near_boundary and high_local_y:
-        policy_decision = "uncertain"
-        policy_reason = "near_boundary_high_local_y_err"
+        policy_reason = "bbox_corner_proxy_near_boundary_high_spread"
 
     out["policy_decision"] = policy_decision
     out["policy_reason"] = policy_reason
